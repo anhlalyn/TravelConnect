@@ -1,0 +1,61 @@
+@import "tailwindcss";
+
+@theme {
+  --color-green-main: #1a9e4a;
+  --color-forest: #000000;      /* Chuyển hẳn sang đen để rõ nét */
+  --color-forest-muted: #111111; 
+  --color-leaf-bg: #f0faf4;
+}
+
+@layer base {
+  html, body {
+    @apply antialiased;
+    font-family: 'DM Sans', sans-serif;
+    /* Ép chữ mặc định cực đậm và đen */
+    color: #000000 !important;
+    font-weight: 700 !important; /* Semi-bold trở lên */
+    font-size: 16px;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply tracking-tight;
+    color: #000000 !important;
+    font-weight: 900 !important; /* Đậm nhất cho tiêu đề */
+  }
+}
+
+@layer components {
+  /* Cấu trúc Nền tảng 3 cột */
+  .platform-layout {
+    display: grid;
+    grid-template-columns: 280px 1fr 350px;
+    min-height: 100vh;
+  }
+
+  /* Sidebar Trái đậm đà */
+  .sidebar-left {
+    @apply bg-white border-r-2 border-slate-200 p-6 fixed h-full w-[280px] z-30;
+  }
+
+  /* Bảng tin chính */
+  .main-feed {
+    @apply ml-[280px] mr-[350px] p-8 bg-leaf-bg min-h-screen;
+  }
+
+  /* Sidebar Phải (Xu hướng) */
+  .sidebar-right {
+    @apply w-[350px] bg-leaf-bg border-l-2 border-slate-200 p-8 fixed right-0 h-full overflow-y-auto;
+  }
+
+  /* Ô nhập liệu với viền đen rõ nét */
+  .platform-input {
+    @apply w-full p-4 bg-white border-2 border-black rounded-[20px] 
+           outline-none font-black text-black placeholder:text-slate-500 transition-all;
+  }
+
+  /* Nút bấm Platform */
+  .platform-btn-primary {
+    @apply bg-black text-white px-8 py-3 rounded-2xl font-black text-sm uppercase tracking-widest 
+           hover:bg-green-main shadow-xl transition-all active:scale-95;
+  }
+}
