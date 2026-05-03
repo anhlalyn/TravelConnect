@@ -12,13 +12,11 @@ import {
   Trash2,
   Edit3,
   Bookmark,
-  PlayCircle,
-  ShieldCheck,
-  ShieldAlert,
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { useNavigate } from 'react-router-dom'
 import { buildUploadUrl } from '../config'
+import PostMediaGallery from './PostMediaGallery'
 import { getTrustBadge } from '../utils/trustBadge'
 
 const PostCard = ({ post, onRefresh, currentUser }) => {
@@ -31,22 +29,25 @@ const PostCard = ({ post, onRefresh, currentUser }) => {
   const navigate = useNavigate()
 
   const isOwner = currentUser?.id === post?.id_nguoi_dung
-  const displayName = post?.ten_nguoi_dang || post?.ten || 'Nguoi dung'
+  const displayName = post?.ten_nguoi_dang || post?.ten || 'Người dùng'
   const hasLocationTag = post?.id_kdl_gan_the && post?.ten_kdl_gan_the
   const trust = getTrustBadge(post?.diem_tin_cay)
   const mediaList =
     Array.isArray(post?.media_json) && post.media_json.length
       ? post.media_json
       : (post?.hinh_anh_json || []).map((url) => ({ type: 'image', url }))
-  const compliance = post?.kiem_duyet_so_json || null
+  const bookingPath =
+    hasLocationTag && post?.vai_tro === 'khach_du_lich'
+      ? `/booking/${post.id_kdl_gan_the}?ref=${post.id_nguoi_dung}`
+      : `/booking/${post.id_kdl_gan_the}`
 
   const handleSave = async () => {
     try {
       const res = await api.post('/posts/save', { id_bai_viet: post.id })
-      toast.success(res.data.saved ? 'Da luu vao bo suu tap' : 'Da bo luu')
+      toast.success(res.data.saved ? 'Đã lưu vào bộ sưu tập' : 'Đã bỏ lưu')
       if (onRefresh) onRefresh()
     } catch {
-      toast.error('Loi khi luu bai viet')
+      toast.error('Lỗi khi lưu bài viết')
     }
   }
 
@@ -55,7 +56,7 @@ const PostCard = ({ post, onRefresh, currentUser }) => {
       const res = await api.post('/posts/like', { id_bai_viet: post.id })
       if (res.data.success && onRefresh) onRefresh()
     } catch {
-      toast.error('Loi tuong tac')
+      toast.error('Lỗi tương tác')
     }
   }
 
@@ -65,7 +66,7 @@ const PostCard = ({ post, onRefresh, currentUser }) => {
         const res = await api.get(`/posts/${post.id}/comments`)
         setCommentList(res.data.data || [])
       } catch (err) {
-        console.error('Loi lay binh luan:', err)
+        console.error('Lỗi lấy bình luận:', err)
       }
     }
     setShowComments(!showComments)
@@ -79,20 +80,20 @@ const PostCard = ({ post, onRefresh, currentUser }) => {
       const res = await api.get(`/posts/${post.id}/comments`)
       setCommentList(res.data.data || [])
       if (onRefresh) onRefresh()
-      toast.success('Da dang binh luan')
+      toast.success('Đã đăng bình luận')
     } catch {
-      toast.error('Loi them binh luan')
+      toast.error('Lỗi thêm bình luận')
     }
   }
 
   const handleDelete = async () => {
-    if (!window.confirm('Ban co chac muon xoa bai viet nay?')) return
+    if (!window.confirm('Bạn có chắc muốn xóa bài viết này?')) return
     try {
       await api.delete(`/posts/${post.id}`)
-      toast.success('Da xoa bai viet')
+      toast.success('Đã xóa bài viết')
       if (onRefresh) onRefresh()
     } catch {
-      toast.error('Loi xoa bai')
+      toast.error('Lỗi xóa bài')
     }
   }
 
@@ -101,14 +102,14 @@ const PostCard = ({ post, onRefresh, currentUser }) => {
       await api.put(`/posts/${post.id}`, { noi_dung: editContent, danh_muc: post?.danh_muc })
       setIsEditing(false)
       if (onRefresh) onRefresh()
-      toast.success('Da cap nhat')
+      toast.success('Đã cập nhật')
     } catch {
-      toast.error('Loi cap nhat')
+      toast.error('Lỗi cập nhật')
     }
   }
 
   const handleBooking = () => {
-    navigate(`/booking/${post.id_kdl_gan_the}`)
+    navigate(bookingPath)
   }
 
   return (
@@ -168,13 +169,13 @@ const PostCard = ({ post, onRefresh, currentUser }) => {
                     }}
                     className="flex w-full items-center gap-3 px-4 py-3 text-left text-sm font-bold text-slate-600 hover:bg-slate-50"
                   >
-                    <Edit3 size={16} className="text-blue-500" /> Chinh sua
+                    <Edit3 size={16} className="text-blue-500" /> Chỉnh sửa
                   </button>
                   <button
                     onClick={handleDelete}
                     className="flex w-full items-center gap-3 px-4 py-3 text-left text-sm font-bold text-red-500 hover:bg-red-50"
                   >
-                    <Trash2 size={16} /> Xoa bai viet
+                    <Trash2 size={16} /> Xóa bài viết
                   </button>
                 </div>
               )}
@@ -194,10 +195,10 @@ const PostCard = ({ post, onRefresh, currentUser }) => {
             />
             <div className="flex gap-2">
               <button onClick={handleUpdate} className="rounded-xl bg-blue-600 px-4 py-2 text-xs font-black text-white shadow-md">
-                LUU
+                LƯU
               </button>
               <button onClick={() => setIsEditing(false)} className="rounded-xl bg-slate-100 px-4 py-2 text-xs font-black text-slate-500">
-                HUY
+                HỦY
               </button>
             </div>
           </div>
@@ -205,26 +206,6 @@ const PostCard = ({ post, onRefresh, currentUser }) => {
           <p className="text-[15px] font-medium leading-relaxed text-slate-700">{post?.noi_dung}</p>
         )}
       </div>
-
-      {compliance && !isEditing && (
-        <div
-          className={`mx-6 mb-4 flex items-center justify-between rounded-2xl border p-3 ${
-            compliance.ready ? 'border-emerald-100 bg-emerald-50' : 'border-amber-100 bg-amber-50'
-          }`}
-        >
-          <div className="flex items-center gap-3">
-            <div className={`rounded-xl p-2 ${compliance.ready ? 'bg-white text-emerald-600' : 'bg-white text-amber-600'}`}>
-              {compliance.ready ? <ShieldCheck size={16} /> : <ShieldAlert size={16} />}
-            </div>
-            <div>
-              <p className="text-[9px] font-black uppercase tracking-tighter text-slate-500">Chuan nen tang so</p>
-              <p className={`text-[13px] font-black ${compliance.ready ? 'text-emerald-700' : 'text-amber-700'}`}>
-                {compliance.score}/100 • {compliance.summary}
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
 
       {hasLocationTag && !isEditing && (
         <div
@@ -244,35 +225,7 @@ const PostCard = ({ post, onRefresh, currentUser }) => {
         </div>
       )}
 
-      {mediaList.length > 0 && (
-        <div className={`grid gap-2 px-4 pb-4 ${mediaList.length > 1 ? 'grid-cols-2' : 'grid-cols-1'}`}>
-          {mediaList.map((media, i) =>
-            media.type === 'video' ? (
-              <div key={`${media.url}-${i}`} className="relative">
-                <video
-                  src={buildUploadUrl(media.url)}
-                  className="h-64 w-full rounded-[2rem] object-cover shadow-inner bg-black"
-                  controls
-                  playsInline
-                />
-                <div className="absolute left-3 top-3 rounded-full bg-black/60 px-3 py-1 text-[10px] font-black uppercase text-white flex items-center gap-1">
-                  <PlayCircle size={12} /> Video
-                </div>
-              </div>
-            ) : (
-              <img
-                key={`${media.url}-${i}`}
-                src={buildUploadUrl(media.url)}
-                className="h-64 w-full rounded-[2rem] object-cover shadow-inner"
-                alt="post"
-                onError={(e) => {
-                  e.target.style.display = 'none'
-                }}
-              />
-            ),
-          )}
-        </div>
-      )}
+      {mediaList.length > 0 && <div className="px-4 pb-4"><PostMediaGallery mediaList={mediaList} /></div>}
 
       <div className="mx-4 flex border-t border-gray-50 py-2">
         <button
@@ -306,7 +259,7 @@ const PostCard = ({ post, onRefresh, currentUser }) => {
                   )}
                 </div>
                 <div className="flex-1 rounded-[1.5rem] border border-gray-100 bg-white p-3 px-4 shadow-sm">
-                  <p className="mb-0.5 text-[11px] font-black uppercase text-blue-600">{cmt.ten || 'Nguoi dung'}</p>
+                  <p className="mb-0.5 text-[11px] font-black uppercase text-blue-600">{cmt.ten || 'Người dùng'}</p>
                   <p className="text-sm font-medium leading-snug text-slate-800">{cmt.noi_dung}</p>
                 </div>
               </div>
@@ -316,7 +269,7 @@ const PostCard = ({ post, onRefresh, currentUser }) => {
             <input
               type="text"
               className="flex-1 rounded-2xl border-2 border-transparent bg-white p-3 text-sm font-bold outline-none focus:border-blue-200"
-              placeholder="Viet phan hoi..."
+              placeholder="Viết phản hồi..."
               value={text}
               onChange={(e) => setText(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleSendComment()}

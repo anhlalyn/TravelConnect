@@ -3,7 +3,6 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { ArrowRight, Eye, EyeOff, Lock, ShieldCheck } from "lucide-react";
 import toast from "react-hot-toast";
 import api from "../api";
-import AnimatedPage from "../components/AnimatedPage";
 import {
   clearResetPasswordContext,
   getResetPasswordContext,
@@ -75,8 +74,7 @@ const ResetPassword = () => {
   };
 
   return (
-    <AnimatedPage>
-      <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[#F1F5F9] p-4">
+    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[#F1F5F9] p-4">
         <div className="absolute left-[-5%] top-[-5%] h-80 w-80 rounded-full bg-indigo-200/40 blur-[100px]" />
 
         <div className="relative z-10 w-full max-w-md">
@@ -166,7 +164,6 @@ const ResetPassword = () => {
           </div>
         </div>
       </div>
-    </AnimatedPage>
   );
 };
 

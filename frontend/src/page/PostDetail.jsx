@@ -5,8 +5,6 @@ import {
   MapPin,
   MessageSquare,
   PlayCircle,
-  ShieldAlert,
-  ShieldCheck,
   Star,
   Ticket,
 } from "lucide-react";
@@ -14,6 +12,7 @@ import toast from "react-hot-toast";
 import api from "../api";
 import Navbar from "../components/Navbar";
 import { buildUploadUrl } from "../config";
+import PostMediaGallery from "../components/PostMediaGallery";
 
 const PostDetail = ({ user }) => {
   const { id } = useParams();
@@ -23,6 +22,10 @@ const PostDetail = ({ user }) => {
   const [comment, setComment] = useState("");
   const isOwner = Number(user?.id) === Number(data?.post?.id_nguoi_dung);
   const isTourist = user?.vai_tro === "khach_du_lich";
+  const bookingPath =
+    data?.post?.id_kdl_gan_the && data?.post?.vai_tro === "khach_du_lich"
+      ? `/booking/${data.post.id_kdl_gan_the}?ref=${data.post.id_nguoi_dung}`
+      : `/booking/${data?.post?.id_nguoi_dung}`;
 
   const mediaList = useMemo(() => {
     const media = data?.post?.media_json;
@@ -31,7 +34,6 @@ const PostDetail = ({ user }) => {
   }, [data]);
 
   const heroMedia = mediaList[0] || null;
-  const compliance = data?.post?.kiem_duyet_so_json || null;
 
   const fetchDetail = useCallback(async () => {
     try {
@@ -79,7 +81,7 @@ const PostDetail = ({ user }) => {
       toast.error("Chỉ khách du lịch mới được đặt vé.");
       return;
     }
-    navigate(`/booking/${data.post.id_nguoi_dung}`);
+    navigate(bookingPath);
   };
 
   if (!data?.post) {
@@ -149,22 +151,6 @@ const PostDetail = ({ user }) => {
               </span>
             </div>
 
-            {compliance && (
-              <div
-                className={`rounded-2xl border px-4 py-3 ${
-                  compliance.ready
-                    ? "border-emerald-100 bg-emerald-50 text-emerald-700"
-                    : "border-amber-100 bg-amber-50 text-amber-700"
-                }`}
-              >
-                <div className="flex items-center gap-2 text-xs font-black uppercase tracking-widest">
-                  {compliance.ready ? <ShieldCheck size={14} /> : <ShieldAlert size={14} />}
-                  <span>Chuẩn nền tảng số {compliance.score}/100</span>
-                </div>
-                <p className="mt-1 text-sm font-bold">{compliance.summary}</p>
-              </div>
-            )}
-
             <h1 className="text-4xl font-black italic leading-tight tracking-tighter text-slate-800">
               {data.post.tieu_de}
             </h1>
@@ -179,26 +165,7 @@ const PostDetail = ({ user }) => {
             </p>
 
             {mediaList.length > 1 && (
-              <div className="grid grid-cols-2 gap-4">
-                {mediaList.slice(1).map((media, index) =>
-                  media.type === "video" ? (
-                    <video
-                      key={`${media.url}-${index}`}
-                      src={buildUploadUrl(media.url)}
-                      className="h-52 w-full rounded-[1.5rem] bg-black object-cover"
-                      controls
-                      playsInline
-                    />
-                  ) : (
-                    <img
-                      key={`${media.url}-${index}`}
-                      src={buildUploadUrl(media.url)}
-                      className="h-52 w-full rounded-[1.5rem] object-cover"
-                      alt="Media bài viết"
-                    />
-                  ),
-                )}
-              </div>
+              <PostMediaGallery mediaList={mediaList.slice(1)} roundedClassName="rounded-[1.8rem]" />
             )}
 
             {!isOwner && (

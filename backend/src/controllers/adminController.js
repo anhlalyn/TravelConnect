@@ -1,7 +1,19 @@
 const db = require("../config/db");
-const { ensurePlatformColumns } = require("../utils/platformSchema");
+const {
+  ensurePlatformColumns,
+  getPlatformSetting,
+  setPlatformSetting,
+  getPostCategories,
+} = require("../utils/platformSchema");
 
 const parseNumber = (value) => Number(value || 0);
+const buildCategorySlug = (value) =>
+  String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "");
 
 exports.getOverview = async (_req, res) => {
   try {
@@ -383,6 +395,149 @@ exports.updateUserStatus = async (req, res) => {
     );
 
     res.json({ success: true, message: "Đã cập nhật trạng thái tài khoản." });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+};
+
+exports.getPlatformSettings = async (_req, res) => {
+  try {
+    await ensurePlatformColumns();
+    const commissionConfig = await getPlatformSetting("referral_commission_rate", { value: 0.1 });
+
+    res.json({
+      success: true,
+      data: {
+        referral_commission_rate: Number(commissionConfig?.value || 0.1),
+      },
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+};
+
+exports.updatePlatformSettings = async (req, res) => {
+  try {
+    await ensurePlatformColumns();
+    const commissionRate = Number(req.body.referral_commission_rate);
+
+    if (Number.isNaN(commissionRate) || commissionRate < 0 || commissionRate > 1) {
+      return res.status(400).json({
+        success: false,
+        message: "Tỷ lệ hoa hồng phải nằm trong khoảng từ 0 đến 1.",
+      });
+    }
+
+    await setPlatformSetting("referral_commission_rate", { value: commissionRate });
+
+    res.json({
+      success: true,
+      message: "Đã cập nhật cấu hình nền tảng.",
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+};
+
+exports.getCategories = async (_req, res) => {
+  try {
+    await ensurePlatformColumns();
+    const categories = await getPostCategories({ includeInactive: true });
+    res.json({ success: true, data: categories });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+};
+
+exports.createCategory = async (req, res) => {
+  try {
+    await ensurePlatformColumns();
+    const ten = String(req.body.ten || "").trim();
+    const thu_tu = Number(req.body.thu_tu || 0);
+    const dang_hoat_dong = req.body.dang_hoat_dong === false ? 0 : 1;
+
+    if (!ten) {
+      return res.status(400).json({ success: false, message: "Tên danh mục không được để trống." });
+    }
+
+    const slug = buildCategorySlug(ten);
+    await db.query(
+      `
+        INSERT INTO danh_muc_bai_viet (ten, slug, thu_tu, dang_hoat_dong)
+        VALUES (?, ?, ?, ?)
+      `,
+      [ten, slug, thu_tu, dang_hoat_dong],
+    );
+
+    res.json({ success: true, message: "Đã thêm danh mục mới." });
+  } catch (err) {
+    if (err.code === "ER_DUP_ENTRY") {
+      return res.status(400).json({ success: false, message: "Danh mục này đã tồn tại." });
+    }
+    res.status(500).json({ success: false, error: err.message });
+  }
+};
+
+exports.updateCategory = async (req, res) => {
+  try {
+    await ensurePlatformColumns();
+    const { id } = req.params;
+    const ten = String(req.body.ten || "").trim();
+    const thu_tu = Number(req.body.thu_tu || 0);
+    const dang_hoat_dong = req.body.dang_hoat_dong === false ? 0 : 1;
+
+    if (!ten) {
+      return res.status(400).json({ success: false, message: "Tên danh mục không được để trống." });
+    }
+
+    const slug = buildCategorySlug(ten);
+    const [result] = await db.query(
+      `
+        UPDATE danh_muc_bai_viet
+        SET ten = ?, slug = ?, thu_tu = ?, dang_hoat_dong = ?
+        WHERE id = ?
+      `,
+      [ten, slug, thu_tu, dang_hoat_dong, id],
+    );
+
+    if (!result.affectedRows) {
+      return res.status(404).json({ success: false, message: "Không tìm thấy danh mục cần cập nhật." });
+    }
+
+    res.json({ success: true, message: "Đã cập nhật danh mục." });
+  } catch (err) {
+    if (err.code === "ER_DUP_ENTRY") {
+      return res.status(400).json({ success: false, message: "Tên danh mục bị trùng." });
+    }
+    res.status(500).json({ success: false, error: err.message });
+  }
+};
+
+exports.deleteCategory = async (req, res) => {
+  try {
+    await ensurePlatformColumns();
+    const { id } = req.params;
+    const [categoryRows] = await db.query(
+      "SELECT ten FROM danh_muc_bai_viet WHERE id = ? LIMIT 1",
+      [id],
+    );
+
+    if (!categoryRows.length) {
+      return res.status(404).json({ success: false, message: "Không tìm thấy danh mục để xóa." });
+    }
+
+    const categoryName = categoryRows[0].ten;
+    await db.query("DELETE FROM danh_muc_bai_viet WHERE id = ?", [id]);
+    await db.query(
+      `
+        UPDATE bai_viet
+        SET danh_muc = 'Tổng hợp'
+        WHERE danh_muc = ?
+      `,
+      [categoryName],
+    );
+
+    res.json({ success: true, message: "Đã xóa danh mục." });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
   }

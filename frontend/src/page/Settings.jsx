@@ -14,7 +14,6 @@ import {
 import toast from "react-hot-toast";
 import api from "../api";
 import Navbar from "../components/Navbar";
-import AnimatedPage from "../components/AnimatedPage";
 import { buildUploadUrl } from "../config";
 
 const Settings = ({ user, setUser }) => {
@@ -111,8 +110,7 @@ const Settings = ({ user, setUser }) => {
   };
 
   return (
-    <AnimatedPage>
-      <div className="min-h-screen bg-[#F3F4F6]">
+    <div className="min-h-screen bg-[#F3F4F6]">
         <Navbar user={user} />
 
         <div className="mx-auto grid max-w-7xl grid-cols-12 gap-6 px-4 pb-20 pt-6">
@@ -319,7 +317,6 @@ const Settings = ({ user, setUser }) => {
           </div>
         </div>
       </div>
-    </AnimatedPage>
   );
 };
 

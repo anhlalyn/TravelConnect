@@ -3,7 +3,6 @@ import { Link, useNavigate } from "react-router-dom";
 import { ArrowLeft, ArrowRight, KeyRound, Mail, ShieldCheck } from "lucide-react";
 import toast from "react-hot-toast";
 import api from "../api";
-import AnimatedPage from "../components/AnimatedPage";
 import { saveVerifyOtpContext } from "../utils/authFlowStorage";
 
 const ForgotPassword = () => {
@@ -29,8 +28,7 @@ const ForgotPassword = () => {
   };
 
   return (
-    <AnimatedPage>
-      <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[#F1F5F9] p-4">
+    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[#F1F5F9] p-4">
         <div className="absolute right-[-5%] top-[-5%] h-80 w-80 rounded-full bg-indigo-200/40 blur-[100px]" />
         <div className="absolute bottom-[-5%] left-[-5%] h-80 w-80 rounded-full bg-blue-200/40 blur-[100px]" />
 
@@ -114,7 +112,6 @@ const ForgotPassword = () => {
           </p>
         </div>
       </div>
-    </AnimatedPage>
   );
 };
 

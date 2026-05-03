@@ -1,6 +1,7 @@
 const db = require("../config/db");
 const crypto = require("crypto");
 const { createNotification } = require("../utils/notification");
+const { ensurePlatformColumns, getPlatformSetting } = require("../utils/platformSchema");
 
 exports.createInvoice = async (req, res) => {
   const id_nguoi_mua = req.user.id;
@@ -15,6 +16,7 @@ exports.createInvoice = async (req, res) => {
   } = req.body;
 
   try {
+    await ensurePlatformColumns();
     if (req.user.vai_tro !== "khach_du_lich") {
       return res.status(403).json({
         success: false,
@@ -79,6 +81,7 @@ exports.executePayment = async (req, res) => {
   await connection.beginTransaction();
 
   try {
+    await ensurePlatformColumns();
     const [invoices] = await connection.query(
       `
         SELECT *
@@ -110,22 +113,38 @@ exports.executePayment = async (req, res) => {
     ]);
 
     if (invoice.id_nguoi_gioi_thieu && invoice.id_nguoi_gioi_thieu !== id_nguoi_mua) {
-      const hoa_hong = invoice.tong_tien * 0.1;
-      await connection.query("UPDATE nguoi_dung SET so_du = so_du + ? WHERE id = ?", [
-        hoa_hong,
-        invoice.id_nguoi_gioi_thieu,
-      ]);
-      await connection.query(
-        `
-          INSERT INTO thong_bao (id_nguoi_nhan, id_nguoi_gui, noi_dung, loai_thong_bao)
-          VALUES (?, ?, ?, 'he_thong')
-        `,
-        [
-          invoice.id_nguoi_gioi_thieu,
-          id_nguoi_mua,
-          `Nhận ${hoa_hong.toLocaleString("vi-VN")}đ hoa hồng giới thiệu.`,
-        ],
+      const [referrers] = await connection.query(
+        "SELECT id, vai_tro FROM nguoi_dung WHERE id = ? LIMIT 1",
+        [invoice.id_nguoi_gioi_thieu],
       );
+
+      if (
+        referrers.length &&
+        referrers[0].vai_tro === "khach_du_lich" &&
+        Number(invoice.id_nguoi_gioi_thieu) !== Number(invoice.id_kdl)
+      ) {
+        const commissionConfig = await getPlatformSetting("referral_commission_rate", { value: 0.1 });
+        const commissionRate = Number(commissionConfig?.value || 0.1);
+        const hoa_hong = Math.round(invoice.tong_tien * commissionRate);
+
+        if (hoa_hong > 0) {
+          await connection.query("UPDATE nguoi_dung SET so_du = so_du + ? WHERE id = ?", [
+            hoa_hong,
+            invoice.id_nguoi_gioi_thieu,
+          ]);
+          await connection.query(
+            `
+              INSERT INTO thong_bao (id_nguoi_nhan, id_nguoi_gui, noi_dung, loai_thong_bao)
+              VALUES (?, ?, ?, 'he_thong')
+            `,
+            [
+              invoice.id_nguoi_gioi_thieu,
+              id_nguoi_mua,
+              `Nhận ${hoa_hong.toLocaleString("vi-VN")}đ hoa hồng giới thiệu.`,
+            ],
+          );
+        }
+      }
     }
 
     await connection.query(

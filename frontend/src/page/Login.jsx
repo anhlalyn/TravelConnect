@@ -52,6 +52,7 @@ const Login = ({ setUser }) => {
 
       localStorage.setItem("token", res.data.token);
       localStorage.setItem("user", JSON.stringify(res.data.user));
+      window.dispatchEvent(new Event("auth-change"));
       setUser(res.data.user);
       setErrors({});
       setStatusMessage("Đăng nhập thành công. Hệ thống đang chuyển hướng...");

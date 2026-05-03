@@ -341,3 +341,81 @@ exports.getSuggestKdl = async (req, res) => {
     res.status(500).json({ success: false, message: "Lỗi máy chủ" });
   }
 };
+
+exports.searchGlobal = async (req, res) => {
+  const keyword = String(req.query.q || "").trim();
+
+  if (!keyword) {
+    return res.json({
+      success: true,
+      data: {
+        users: [],
+        posts: [],
+      },
+    });
+  }
+
+  try {
+    await ensurePlatformColumns();
+    const hasCategoryColumn = await columnExists("bai_viet", "danh_muc");
+    const likeKeyword = `%${keyword}%`;
+
+    const [users] = await db.query(
+      `
+        SELECT nd.id, nd.ten, nd.anh_dai_dien, nd.vai_tro, hs.ten_khu_du_lich, hs.tinh_thanh
+        FROM nguoi_dung nd
+        LEFT JOIN ho_so_khu_du_lich hs ON hs.id_nguoi_dung = nd.id
+        WHERE nd.ten LIKE ?
+           OR COALESCE(hs.ten_khu_du_lich, '') LIKE ?
+           OR COALESCE(hs.tinh_thanh, '') LIKE ?
+        ORDER BY
+          CASE
+            WHEN COALESCE(hs.ten_khu_du_lich, '') LIKE ? THEN 0
+            WHEN nd.ten LIKE ? THEN 1
+            ELSE 2
+          END,
+          nd.ten ASC
+        LIMIT 6
+      `,
+      [likeKeyword, likeKeyword, likeKeyword, likeKeyword, likeKeyword],
+    );
+
+    const [posts] = await db.query(
+      `
+        SELECT
+          bv.id,
+          bv.tieu_de,
+          bv.noi_dung,
+          bv.id_nguoi_dung,
+          bv.hinh_anh_json
+          ${hasCategoryColumn ? ", bv.danh_muc" : ""},
+          nd.ten AS ten_nguoi_dang,
+          hs.ten_khu_du_lich
+        FROM bai_viet bv
+        JOIN nguoi_dung nd ON nd.id = bv.id_nguoi_dung
+        LEFT JOIN ho_so_khu_du_lich hs ON hs.id_nguoi_dung = nd.id
+        WHERE bv.tieu_de LIKE ?
+           OR bv.noi_dung LIKE ?
+           OR COALESCE(hs.ten_khu_du_lich, '') LIKE ?
+           OR nd.ten LIKE ?
+        ORDER BY bv.ngay_tao DESC
+        LIMIT 6
+      `,
+      [likeKeyword, likeKeyword, likeKeyword, likeKeyword],
+    );
+
+    res.json({
+      success: true,
+      data: {
+        users,
+        posts: posts.map((post) => ({
+          ...post,
+          hinh_anh_json: parseJsonArray(post.hinh_anh_json),
+          danh_muc: hasCategoryColumn ? post.danh_muc || "Tổng hợp" : "Tổng hợp",
+        })),
+      },
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+};

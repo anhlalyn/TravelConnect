@@ -12,7 +12,6 @@ const CreatePost = ({ user, onPostSuccess }) => {
   const [searchKdl, setSearchKdl] = useState("");
   const [listKdl, setListKdl] = useState([]);
   const [selectedKdl, setSelectedKdl] = useState(null);
-  const [compliance, setCompliance] = useState(null);
 
   const fileInputRef = useRef(null);
 
@@ -82,7 +81,6 @@ const CreatePost = ({ user, onPostSuccess }) => {
 
       if (res.data.success) {
         toast.success("Đăng bài thành công.");
-        setCompliance(res.data.compliance || null);
         previews.forEach((item) => URL.revokeObjectURL(item.url));
         setNoiDung("");
         setFiles([]);
@@ -129,22 +127,6 @@ const CreatePost = ({ user, onPostSuccess }) => {
             </div>
           )}
 
-          {compliance && (
-            <div
-              className={`rounded-2xl border px-4 py-3 text-sm ${
-                compliance.ready
-                  ? "border-emerald-100 bg-emerald-50 text-emerald-700"
-                  : "border-amber-100 bg-amber-50 text-amber-700"
-              }`}
-            >
-              <p className="mb-1 text-[10px] font-black uppercase tracking-widest">
-                Chuẩn nền tảng số
-              </p>
-              <p className="font-bold">
-                {compliance.summary} Điểm: {compliance.score}/100
-              </p>
-            </div>
-          )}
         </div>
       </div>
 

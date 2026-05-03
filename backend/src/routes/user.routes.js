@@ -9,6 +9,7 @@ const authMiddleware = require('../middlewares/auth.middleware');
 
 // Lấy thông tin profile của bất kỳ ai (public)
 router.get('/profile/:id', userController.getUserProfile);
+router.get('/search', authMiddleware, userController.searchGlobal);
 
 // Cập nhật thông tin hồ sơ (Cần đăng nhập + Upload ảnh)
 // Sử dụng uploadFields đã định nghĩa trong Controller

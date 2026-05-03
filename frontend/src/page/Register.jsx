@@ -3,7 +3,6 @@ import { Link, useNavigate } from "react-router-dom";
 import { ArrowRight, Building2, Lock, Mail, Navigation, User } from "lucide-react";
 import toast from "react-hot-toast";
 import api from "../api";
-import AnimatedPage from "../components/AnimatedPage";
 import { TRAVEL_INTEREST_OPTIONS } from "../constants/explore";
 import { saveVerifyOtpContext } from "../utils/authFlowStorage";
 
@@ -55,8 +54,7 @@ const Register = () => {
   };
 
   return (
-    <AnimatedPage>
-      <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[#F1F5F9] p-4">
+    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[#F1F5F9] p-4">
         <div className="absolute right-[-10%] top-[-10%] h-96 w-96 rounded-full bg-indigo-200/50 blur-[100px]" />
 
         <div className="relative z-10 w-full max-w-2xl">
@@ -206,7 +204,6 @@ const Register = () => {
           </div>
         </div>
       </div>
-    </AnimatedPage>
   );
 };
 

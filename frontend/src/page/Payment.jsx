@@ -22,7 +22,6 @@ import toast from "react-hot-toast";
 import api from "../api";
 import Navbar from "../components/Navbar";
 import Sidebar from "../components/Sidebar";
-import AnimatedPage from "../components/AnimatedPage";
 
 const PAYMENT_DRAFT_PREFIX = "pending_invoice_";
 const QUICK_DEPOSIT_OPTIONS = [100000, 500000, 1000000];
@@ -258,8 +257,7 @@ const Payment = ({ user: initialUser }) => {
   };
 
   return (
-    <AnimatedPage>
-      <div className="min-h-screen bg-[#F8FAFC]">
+    <div className="min-h-screen bg-[#F8FAFC]">
         <Navbar user={user} />
         <div className="max-w-7xl mx-auto grid grid-cols-12 gap-8 pt-8 px-4 pb-24">
           <div className="hidden lg:block col-span-3">
@@ -619,7 +617,6 @@ const Payment = ({ user: initialUser }) => {
           </div>
         )}
       </div>
-    </AnimatedPage>
   );
 };
 

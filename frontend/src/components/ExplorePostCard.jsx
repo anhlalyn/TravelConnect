@@ -1,5 +1,5 @@
 import React from "react";
-import { MessageCircle, Bookmark, Ticket, MapPin, Star, PlayCircle, ShieldCheck, ShieldAlert } from "lucide-react";
+import { MessageCircle, Bookmark, Ticket, MapPin, Star, PlayCircle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import api from "../api";
@@ -13,7 +13,6 @@ const ExplorePostCard = ({ post, currentUser, onRefresh }) => {
       ? post.media_json
       : (post?.hinh_anh_json || []).map((url) => ({ type: "image", url }));
   const heroMedia = mediaList[0];
-  const compliance = post?.kiem_duyet_so_json || null;
 
   const goToDetail = () => {
     navigate(`/post/${post.id}`);
@@ -40,7 +39,7 @@ const ExplorePostCard = ({ post, currentUser, onRefresh }) => {
       toast.success(res.data.message);
       if (onRefresh) onRefresh();
     } catch {
-      toast.error(" lỗi khi lưu bài viết");
+      toast.error("Lỗi khi lưu bài viết");
     }
   };
 
@@ -74,11 +73,11 @@ const ExplorePostCard = ({ post, currentUser, onRefresh }) => {
         )}
         <div className="absolute top-4 left-4 flex gap-2 flex-wrap">
           <span className="bg-white/90 backdrop-blur-md px-3 py-1 rounded-xl font-black text-[10px] text-blue-600 shadow-sm">
-            {post.danh_muc || "Tong hop"}
+            {post.danh_muc || "Tổng hợp"}
           </span>
           <span className="bg-slate-900/85 text-white px-3 py-1 rounded-xl font-black text-[10px] shadow-sm flex items-center gap-1.5">
             <Star size={12} fill="currentColor" />
-            {Number(post.diem_danh_gia || 0).toFixed(1)} • {post.tong_danh_gia || 0} danh gia
+            {Number(post.diem_danh_gia || 0).toFixed(1)} • {post.tong_danh_gia || 0} đánh giá
           </span>
           {heroMedia?.type === "video" && (
             <span className="bg-rose-500/90 text-white px-3 py-1 rounded-xl font-black text-[10px] shadow-sm">
@@ -97,7 +96,7 @@ const ExplorePostCard = ({ post, currentUser, onRefresh }) => {
             <div className="flex items-center gap-1 text-slate-400">
               <MapPin size={12} className="text-blue-500" />
               <span className="text-[10px] font-black uppercase tracking-widest truncate">
-                {post.ten_khu_du_lich || post.ten_nguoi_dang || "Co so du lich"}
+                {post.ten_khu_du_lich || post.ten_nguoi_dang || "Cơ sở du lịch"}
               </span>
             </div>
           </div>
@@ -112,20 +111,6 @@ const ExplorePostCard = ({ post, currentUser, onRefresh }) => {
             <Bookmark size={20} fill={post.da_luu ? "currentColor" : "none"} />
           </button>
         </div>
-
-        {compliance && (
-          <div
-            className={`mb-4 rounded-2xl px-4 py-3 border ${
-              compliance.ready ? "bg-emerald-50 text-emerald-700 border-emerald-100" : "bg-amber-50 text-amber-700 border-amber-100"
-            }`}
-          >
-            <div className="flex items-center gap-2 text-xs font-black uppercase tracking-widest">
-              {compliance.ready ? <ShieldCheck size={14} /> : <ShieldAlert size={14} />}
-              <span>{compliance.score}/100</span>
-            </div>
-            <p className="text-xs font-bold mt-1">{compliance.summary}</p>
-          </div>
-        )}
 
         <p className="text-sm text-slate-500 line-clamp-3 mb-4 flex-1 leading-relaxed">
           {post.noi_dung}

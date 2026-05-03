@@ -17,7 +17,6 @@ import {
 import toast from "react-hot-toast";
 import api from "../api";
 import Navbar from "../components/Navbar";
-import AnimatedPage from "../components/AnimatedPage";
 
 const PAYMENT_DRAFT_PREFIX = "pending_invoice_";
 const timelineTimes = ["08:30", "10:30", "13:30", "16:00", "18:00"];
@@ -260,8 +259,7 @@ const Booking = ({ user }) => {
   }
 
   return (
-    <AnimatedPage>
-      <div className="min-h-screen bg-[#F8FAFC]">
+    <div className="min-h-screen bg-[#F8FAFC]">
         <Navbar user={user} />
 
         <div className="max-w-7xl mx-auto pt-10 px-4 pb-24 grid grid-cols-12 gap-8">
@@ -596,7 +594,6 @@ const Booking = ({ user }) => {
           </div>
         </div>
       </div>
-    </AnimatedPage>
   );
 };
 

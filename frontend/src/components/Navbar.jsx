@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   Bell,
@@ -20,9 +20,14 @@ import { getTrustBadge } from '../utils/trustBadge'
 
 const Navbar = ({ user }) => {
   const navigate = useNavigate()
+  const searchRef = useRef(null)
   const [showDropdown, setShowDropdown] = useState(false)
   const [showNoti, setShowNoti] = useState(false)
   const [notifications, setNotifications] = useState([])
+  const [searchTerm, setSearchTerm] = useState('')
+  const [showSearchResults, setShowSearchResults] = useState(false)
+  const [searchLoading, setSearchLoading] = useState(false)
+  const [searchResults, setSearchResults] = useState({ users: [], posts: [] })
 
   useEffect(() => {
     if (!user) return
@@ -47,6 +52,52 @@ const Navbar = ({ user }) => {
     }
   }, [user])
 
+  useEffect(() => {
+    if (!user) return
+
+    const keyword = searchTerm.trim()
+    if (!keyword) {
+      setSearchResults({ users: [], posts: [] })
+      setSearchLoading(false)
+      return
+    }
+
+    let active = true
+    setSearchLoading(true)
+
+    const timer = setTimeout(async () => {
+      try {
+        const res = await api.get('/users/search', { params: { q: keyword } })
+        if (active && res.data.success) {
+          setSearchResults(res.data.data || { users: [], posts: [] })
+        }
+      } catch (err) {
+        if (active) {
+          console.error('Lỗi tìm kiếm:', err)
+          setSearchResults({ users: [], posts: [] })
+        }
+      } finally {
+        if (active) setSearchLoading(false)
+      }
+    }, 250)
+
+    return () => {
+      active = false
+      clearTimeout(timer)
+    }
+  }, [searchTerm, user])
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (!searchRef.current?.contains(event.target)) {
+        setShowSearchResults(false)
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
+
   const handleMarkAllRead = async () => {
     try {
       await api.put('/notifications/mark-read')
@@ -60,6 +111,7 @@ const Navbar = ({ user }) => {
   const unreadCount = notifications.filter((n) => !n.da_xem).length
   const isTourist = user?.vai_tro === 'khach_du_lich'
   const trustBadge = getTrustBadge(user?.diem_tin_cay)
+  const totalSearchResults = (searchResults.users?.length || 0) + (searchResults.posts?.length || 0)
   const roleLabel =
     user?.vai_tro === 'admin'
       ? 'Quản trị hệ thống'
@@ -83,13 +135,118 @@ const Navbar = ({ user }) => {
             </span>
           </div>
 
-          <div className="hidden w-full max-w-[280px] items-center rounded-2xl border border-transparent bg-gray-50 px-4 py-2 transition-all focus-within:border-blue-200 focus-within:bg-white md:flex">
-            <Search size={18} className="text-gray-400" />
-            <input
-              type="text"
-              placeholder="Khám phá ngay..."
-              className="ml-2 w-full border-none bg-transparent text-sm font-bold text-slate-700 outline-none placeholder:text-gray-400"
-            />
+          <div ref={searchRef} className="relative hidden w-full max-w-[360px] md:block">
+            <div className="flex items-center rounded-2xl border border-transparent bg-gray-50 px-4 py-2 transition-all focus-within:border-blue-200 focus-within:bg-white">
+              <Search size={18} className="text-gray-400" />
+              <input
+                type="text"
+                value={searchTerm}
+                onChange={(e) => {
+                  setSearchTerm(e.target.value)
+                  setShowSearchResults(true)
+                }}
+                onFocus={() => setShowSearchResults(true)}
+                placeholder="Tìm người dùng, khu du lịch, bài viết..."
+                className="ml-2 w-full border-none bg-transparent text-sm font-bold text-slate-700 outline-none placeholder:text-gray-400"
+              />
+            </div>
+
+            {showSearchResults && (
+              <div className="absolute left-0 right-0 z-30 mt-3 overflow-hidden rounded-[2rem] border border-gray-100 bg-white py-3 shadow-2xl">
+                {!searchTerm.trim() ? (
+                  <div className="px-5 py-6 text-center text-[10px] font-black uppercase tracking-widest text-slate-300">
+                    Nhập từ khóa để tìm kiếm
+                  </div>
+                ) : searchLoading ? (
+                  <div className="px-5 py-6 text-center text-[10px] font-black uppercase tracking-widest text-slate-300">
+                    Đang tìm kiếm...
+                  </div>
+                ) : totalSearchResults > 0 ? (
+                  <div className="max-h-[420px] overflow-y-auto">
+                    {searchResults.users?.length > 0 && (
+                      <div className="mb-2">
+                        <p className="px-5 pb-2 text-[10px] font-black uppercase tracking-widest text-slate-400">
+                          Người dùng và khu du lịch
+                        </p>
+                        {searchResults.users.map((item) => (
+                          <button
+                            key={`user-${item.id}`}
+                            onClick={() => {
+                              navigate(`/profile/${item.id}`)
+                              setShowSearchResults(false)
+                              setSearchTerm('')
+                            }}
+                            className="flex w-full items-center gap-3 px-5 py-3 text-left transition-all hover:bg-slate-50"
+                          >
+                            <div className="h-11 w-11 overflow-hidden rounded-xl bg-blue-600 shadow-sm">
+                              {item.anh_dai_dien ? (
+                                <img src={buildUploadUrl(item.anh_dai_dien)} className="h-full w-full object-cover" alt="avatar" />
+                              ) : (
+                                <div className="flex h-full w-full items-center justify-center font-black text-white">
+                                  {(item.ten_khu_du_lich || item.ten || 'U').charAt(0)}
+                                </div>
+                              )}
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <p className="truncate text-sm font-black text-slate-800">
+                                {item.ten_khu_du_lich || item.ten}
+                              </p>
+                              <p className="truncate text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                                {item.vai_tro === 'khu_du_lich' ? item.tinh_thanh || 'Khu du lịch' : 'Người dùng'}
+                              </p>
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+
+                    {searchResults.posts?.length > 0 && (
+                      <div>
+                        <p className="px-5 pb-2 pt-1 text-[10px] font-black uppercase tracking-widest text-slate-400">
+                          Bài viết
+                        </p>
+                        {searchResults.posts.map((item) => (
+                          <button
+                            key={`post-${item.id}`}
+                            onClick={() => {
+                              navigate(`/post/${item.id}`)
+                              setShowSearchResults(false)
+                              setSearchTerm('')
+                            }}
+                            className="flex w-full items-start gap-3 px-5 py-3 text-left transition-all hover:bg-slate-50"
+                          >
+                            <div className="h-11 w-11 overflow-hidden rounded-xl bg-slate-100 shadow-sm">
+                              {item.hinh_anh_json?.[0] ? (
+                                <img src={buildUploadUrl(item.hinh_anh_json[0])} className="h-full w-full object-cover" alt="post" />
+                              ) : (
+                                <div className="flex h-full w-full items-center justify-center text-slate-400">
+                                  <Search size={16} />
+                                </div>
+                              )}
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <p className="truncate text-sm font-black text-slate-800">
+                                {item.tieu_de || 'Bài viết'}
+                              </p>
+                              <p className="truncate text-[11px] font-medium text-slate-500">
+                                {item.ten_khu_du_lich || item.ten_nguoi_dang} • {item.danh_muc || 'Tổng hợp'}
+                              </p>
+                              <p className="line-clamp-1 text-[11px] text-slate-400">
+                                {item.noi_dung}
+                              </p>
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="px-5 py-6 text-center text-[10px] font-black uppercase tracking-widest text-slate-300">
+                    Không tìm thấy kết quả
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
 
@@ -312,6 +469,7 @@ const Navbar = ({ user }) => {
                     <button
                       onClick={() => {
                         localStorage.clear()
+                        window.dispatchEvent(new Event('auth-change'))
                         navigate('/login')
                       }}
                       className="flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-sm font-bold text-red-500 transition-all hover:bg-red-50"

@@ -14,6 +14,7 @@ const exploreRoutes = require("./explore.routes");
 const userRoutes = require("./user.routes");
 const notificationRoutes = require("./notification.routes");
 const adminRoutes = require("./admin.routes");
+const platformRoutes = require("./platform.routes");
 
 // 2. Đăng ký Middleware các route
 router.use("/auth", authRoutes);
@@ -27,6 +28,7 @@ router.use("/explore", exploreRoutes);
 router.use("/users", userRoutes);
 router.use("/notifications", notificationRoutes);
 router.use("/admin", adminRoutes);
+router.use("/platform", platformRoutes);
 
 // 3. Thanh toán: Chỉ dùng 1 dòng duy nhất để dẫn vào file payment.routes.js
 router.use("/payments", paymentRoutes);

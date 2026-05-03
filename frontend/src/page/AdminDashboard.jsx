@@ -10,6 +10,7 @@ const tabs = [
   { id: 'businesses', label: 'Duyệt KDL' },
   { id: 'bookings', label: 'Booking' },
   { id: 'payments', label: 'Thanh toán' },
+  { id: 'platform', label: 'Nền tảng' },
 ]
 
 const formatCurrency = (value) => `${Number(value || 0).toLocaleString('vi-VN')}đ`
@@ -63,17 +64,22 @@ const AdminDashboard = ({ user }) => {
   const [businesses, setBusinesses] = useState([])
   const [bookings, setBookings] = useState([])
   const [payments, setPayments] = useState([])
+  const [platformSettings, setPlatformSettings] = useState({ referral_commission_rate: 0.1 })
+  const [categories, setCategories] = useState([])
+  const [categoryForm, setCategoryForm] = useState({ ten: '', thu_tu: 0, dang_hoat_dong: true })
   const [actionLoading, setActionLoading] = useState('')
 
   const loadData = async () => {
     try {
       setLoading(true)
-      const [overviewRes, usersRes, businessesRes, bookingsRes, paymentsRes] = await Promise.all([
+      const [overviewRes, usersRes, businessesRes, bookingsRes, paymentsRes, settingsRes, categoriesRes] = await Promise.all([
         api.get('/admin/overview'),
         api.get('/admin/users'),
         api.get('/admin/businesses'),
         api.get('/admin/bookings'),
         api.get('/admin/payments'),
+        api.get('/admin/platform-settings'),
+        api.get('/admin/categories'),
       ])
 
       setOverview(overviewRes.data.data)
@@ -81,6 +87,8 @@ const AdminDashboard = ({ user }) => {
       setBusinesses(businessesRes.data.data || [])
       setBookings(bookingsRes.data.data || [])
       setPayments(paymentsRes.data.data || [])
+      setPlatformSettings(settingsRes.data.data || { referral_commission_rate: 0.1 })
+      setCategories(categoriesRes.data.data || [])
     } catch (err) {
       console.error(err)
       toast.error(err.response?.data?.message || 'Không thể tải dữ liệu quản trị')
@@ -131,6 +139,78 @@ const AdminDashboard = ({ user }) => {
       await loadData()
     } catch (err) {
       toast.error(err.response?.data?.message || 'Không thể cập nhật trạng thái tài khoản.')
+    } finally {
+      setActionLoading('')
+    }
+  }
+
+  const handlePlatformSettingsSave = async () => {
+    setActionLoading('platform-settings')
+    try {
+      await api.put('/admin/platform-settings', {
+        referral_commission_rate: Number(platformSettings.referral_commission_rate || 0),
+      })
+      toast.success('Đã cập nhật tỷ lệ hoa hồng.')
+      await loadData()
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Không thể cập nhật cấu hình nền tảng.')
+    } finally {
+      setActionLoading('')
+    }
+  }
+
+  const handleCreateCategory = async (e) => {
+    e.preventDefault()
+    setActionLoading('create-category')
+    try {
+      await api.post('/admin/categories', {
+        ten: categoryForm.ten,
+        thu_tu: Number(categoryForm.thu_tu || 0),
+        dang_hoat_dong: categoryForm.dang_hoat_dong,
+      })
+      toast.success('Đã thêm danh mục.')
+      setCategoryForm({ ten: '', thu_tu: 0, dang_hoat_dong: true })
+      await loadData()
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Không thể thêm danh mục.')
+    } finally {
+      setActionLoading('')
+    }
+  }
+
+  const handleCategoryFieldChange = (id, field, value) => {
+    setCategories((prev) =>
+      prev.map((item) => (item.id === id ? { ...item, [field]: value } : item)),
+    )
+  }
+
+  const handleUpdateCategory = async (category) => {
+    setActionLoading(`category-update-${category.id}`)
+    try {
+      await api.put(`/admin/categories/${category.id}`, {
+        ten: category.ten,
+        thu_tu: Number(category.thu_tu || 0),
+        dang_hoat_dong: Boolean(category.dang_hoat_dong),
+      })
+      toast.success('Đã cập nhật danh mục.')
+      await loadData()
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Không thể cập nhật danh mục.')
+    } finally {
+      setActionLoading('')
+    }
+  }
+
+  const handleDeleteCategory = async (category) => {
+    if (!window.confirm(`Xóa danh mục "${category.ten}"?`)) return
+
+    setActionLoading(`category-delete-${category.id}`)
+    try {
+      await api.delete(`/admin/categories/${category.id}`)
+      toast.success('Đã xóa danh mục.')
+      await loadData()
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Không thể xóa danh mục.')
     } finally {
       setActionLoading('')
     }
@@ -454,6 +534,148 @@ const AdminDashboard = ({ user }) => {
                   ))}
                 </tbody>
               </table>
+            </div>
+          ) : null}
+
+          {tab === 'platform' ? (
+            <div className="space-y-6">
+              <div className="bg-white rounded-[2.5rem] p-6 shadow-sm border border-gray-100">
+                <h2 className="text-xl font-black text-slate-900 mb-5">Cấu hình hoa hồng</h2>
+                <div className="grid md:grid-cols-[1fr_auto] gap-4 items-end">
+                  <div>
+                    <label className="block text-[11px] font-black uppercase tracking-widest text-slate-400 mb-3">
+                      Tỷ lệ hoa hồng giới thiệu
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      max="1"
+                      step="0.01"
+                      value={platformSettings.referral_commission_rate}
+                      onChange={(e) =>
+                        setPlatformSettings((prev) => ({
+                          ...prev,
+                          referral_commission_rate: e.target.value,
+                        }))
+                      }
+                      className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-5 py-4 font-bold text-slate-700 outline-none focus:border-slate-400"
+                    />
+                    <p className="mt-2 text-xs text-slate-500">
+                      Nhập dạng thập phân. Ví dụ `0.1` là 10%, `0.05` là 5%.
+                    </p>
+                  </div>
+                  <button
+                    onClick={handlePlatformSettingsSave}
+                    disabled={Boolean(actionLoading)}
+                    className="px-5 py-4 rounded-2xl bg-slate-900 text-white text-xs font-black uppercase tracking-widest"
+                  >
+                    {actionLoading === 'platform-settings' ? 'Đang lưu...' : 'Lưu cấu hình'}
+                  </button>
+                </div>
+              </div>
+
+              <div className="bg-white rounded-[2.5rem] p-6 shadow-sm border border-gray-100">
+                <h2 className="text-xl font-black text-slate-900 mb-5">Thêm danh mục</h2>
+                <form onSubmit={handleCreateCategory} className="grid md:grid-cols-4 gap-4">
+                  <input
+                    value={categoryForm.ten}
+                    onChange={(e) => setCategoryForm((prev) => ({ ...prev, ten: e.target.value }))}
+                    className="rounded-2xl border border-slate-200 bg-slate-50 px-5 py-4 font-bold text-slate-700 outline-none focus:border-slate-400"
+                    placeholder="Tên danh mục"
+                  />
+                  <input
+                    type="number"
+                    value={categoryForm.thu_tu}
+                    onChange={(e) => setCategoryForm((prev) => ({ ...prev, thu_tu: e.target.value }))}
+                    className="rounded-2xl border border-slate-200 bg-slate-50 px-5 py-4 font-bold text-slate-700 outline-none focus:border-slate-400"
+                    placeholder="Thứ tự"
+                  />
+                  <label className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-5 py-4 font-bold text-slate-700">
+                    <input
+                      type="checkbox"
+                      checked={categoryForm.dang_hoat_dong}
+                      onChange={(e) =>
+                        setCategoryForm((prev) => ({ ...prev, dang_hoat_dong: e.target.checked }))
+                      }
+                    />
+                    Đang hoạt động
+                  </label>
+                  <button
+                    type="submit"
+                    disabled={Boolean(actionLoading)}
+                    className="rounded-2xl bg-blue-600 px-5 py-4 text-xs font-black uppercase tracking-widest text-white"
+                  >
+                    {actionLoading === 'create-category' ? 'Đang thêm...' : 'Thêm danh mục'}
+                  </button>
+                </form>
+              </div>
+
+              <div className="bg-white rounded-[2.5rem] p-6 shadow-sm border border-gray-100 overflow-x-auto">
+                <h2 className="text-xl font-black text-slate-900 mb-5">Danh sách danh mục</h2>
+                <table className="w-full min-w-[860px] text-sm">
+                  <thead>
+                    <tr className="text-left text-slate-400 uppercase text-[11px] tracking-widest">
+                      <th className="pb-4">Tên danh mục</th>
+                      <th className="pb-4">Slug</th>
+                      <th className="pb-4">Thứ tự</th>
+                      <th className="pb-4">Trạng thái</th>
+                      <th className="pb-4">Thao tác</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {categories.map((item) => (
+                      <tr key={item.id} className="border-t border-slate-100">
+                        <td className="py-4">
+                          <input
+                            value={item.ten}
+                            onChange={(e) => handleCategoryFieldChange(item.id, 'ten', e.target.value)}
+                            className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 font-bold text-slate-700 outline-none"
+                          />
+                        </td>
+                        <td className="py-4 font-bold text-slate-500">{item.slug}</td>
+                        <td className="py-4">
+                          <input
+                            type="number"
+                            value={item.thu_tu}
+                            onChange={(e) => handleCategoryFieldChange(item.id, 'thu_tu', e.target.value)}
+                            className="w-28 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 font-bold text-slate-700 outline-none"
+                          />
+                        </td>
+                        <td className="py-4">
+                          <label className="inline-flex items-center gap-2 text-sm font-bold text-slate-600">
+                            <input
+                              type="checkbox"
+                              checked={Boolean(item.dang_hoat_dong)}
+                              onChange={(e) =>
+                                handleCategoryFieldChange(item.id, 'dang_hoat_dong', e.target.checked)
+                              }
+                            />
+                            Hoạt động
+                          </label>
+                        </td>
+                        <td className="py-4">
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => handleUpdateCategory(item)}
+                              disabled={Boolean(actionLoading)}
+                              className="px-4 py-2 rounded-xl bg-emerald-50 text-emerald-700 text-xs font-black uppercase tracking-widest"
+                            >
+                              {actionLoading === `category-update-${item.id}` ? 'Đang lưu...' : 'Lưu'}
+                            </button>
+                            <button
+                              onClick={() => handleDeleteCategory(item)}
+                              disabled={Boolean(actionLoading)}
+                              className="px-4 py-2 rounded-xl bg-rose-50 text-rose-700 text-xs font-black uppercase tracking-widest"
+                            >
+                              {actionLoading === `category-delete-${item.id}` ? 'Đang xóa...' : 'Xóa'}
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           ) : null}
         </div>

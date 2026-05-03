@@ -1,21 +1,32 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ImagePlus, PlayCircle, ShieldAlert, ShieldCheck, Video, X } from "lucide-react";
+import { ImagePlus, PlayCircle, Video, X } from "lucide-react";
 import toast from "react-hot-toast";
 import api from "../api";
 import ExplorePostCard from "../components/ExplorePostCard";
 import Navbar from "../components/Navbar";
 import Sidebar from "../components/Sidebar";
-import { EXPLORE_CATEGORIES } from "../constants/explore";
+const DEFAULT_CATEGORIES = [
+  "Tất cả",
+  "Nghỉ dưỡng",
+  "Sinh thái",
+  "Check-in",
+  "Ẩm thực",
+  "Văn hóa",
+  "Phiêu lưu",
+  "Gia đình",
+  "Ưu đãi",
+  "Sự kiện",
+];
 
 const ExplorePage = ({ user }) => {
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [posting, setPosting] = useState(false);
   const [activeCategory, setActiveCategory] = useState("Tất cả");
+  const [categories, setCategories] = useState(DEFAULT_CATEGORIES);
   const [search, setSearch] = useState("");
   const [selectedMedia, setSelectedMedia] = useState([]);
   const [previewMedia, setPreviewMedia] = useState([]);
-  const [compliance, setCompliance] = useState(null);
   const [form, setForm] = useState({
     tieu_de: "",
     danh_muc: "Nghỉ dưỡng",
@@ -42,15 +53,33 @@ const ExplorePage = ({ user }) => {
     }
   }, []);
 
+  const fetchCategories = useCallback(async () => {
+    try {
+      const res = await api.get("/platform/categories");
+      const dynamicCategories = (res.data.data || []).map((item) => item.ten);
+      const nextCategories = ["Tất cả", ...dynamicCategories];
+      setCategories(dynamicCategories.length ? nextCategories : DEFAULT_CATEGORIES);
+      setForm((prev) => ({
+        ...prev,
+        danh_muc:
+          prev.danh_muc && nextCategories.includes(prev.danh_muc)
+            ? prev.danh_muc
+            : nextCategories[1] || "Tổng hợp",
+      }));
+    } catch {
+      setCategories(DEFAULT_CATEGORIES);
+    }
+  }, []);
+
   useEffect(() => {
     const load = async () => {
       setLoading(true);
-      await fetchExplorePosts();
+      await Promise.all([fetchExplorePosts(), fetchCategories()]);
       setLoading(false);
     };
 
     load();
-  }, [fetchExplorePosts]);
+  }, [fetchCategories, fetchExplorePosts]);
 
   useEffect(() => {
     return () => {
@@ -59,12 +88,12 @@ const ExplorePage = ({ user }) => {
   }, [previewMedia]);
 
   const personalizedCategories = useMemo(() => {
-    const merged = [...EXPLORE_CATEGORIES];
+    const merged = [...categories];
     userInterests.forEach((interest) => {
       if (!merged.includes(interest)) merged.push(interest);
     });
     return merged;
-  }, [userInterests]);
+  }, [categories, userInterests]);
 
   const filteredPosts = useMemo(() => {
     const normalizedSearch = search.trim().toLowerCase();
@@ -123,12 +152,11 @@ const ExplorePage = ({ user }) => {
     previewMedia.forEach((item) => URL.revokeObjectURL(item.url));
     setForm({
       tieu_de: "",
-      danh_muc: "Nghỉ dưỡng",
+      danh_muc: categories[1] || "Tổng hợp",
       noi_dung: "",
     });
     setSelectedMedia([]);
     setPreviewMedia([]);
-    setCompliance(null);
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
@@ -152,7 +180,6 @@ const ExplorePage = ({ user }) => {
         headers: { "Content-Type": "multipart/form-data" },
       });
 
-      setCompliance(res.data.compliance || null);
       toast.success("Đăng bài thành công.");
       await fetchExplorePosts();
       resetCreateForm();
@@ -217,7 +244,7 @@ const ExplorePage = ({ user }) => {
                 onChange={(e) => setForm((prev) => ({ ...prev, danh_muc: e.target.value }))}
                 className="w-full rounded-2xl border border-slate-100 bg-slate-50 px-5 py-4 font-bold text-slate-700 outline-none focus:border-blue-300"
               >
-                {EXPLORE_CATEGORIES.filter((item) => item !== "Tất cả").map((category) => (
+                {categories.filter((item) => item !== "Tất cả").map((category) => (
                   <option key={category} value={category}>
                     {category}
                   </option>
@@ -299,22 +326,6 @@ const ExplorePage = ({ user }) => {
                   </div>
                 )}
               </div>
-
-              {compliance && (
-                <div
-                  className={`rounded-2xl border px-4 py-3 ${
-                    compliance.ready
-                      ? "border-emerald-100 bg-emerald-50 text-emerald-700"
-                      : "border-amber-100 bg-amber-50 text-amber-700"
-                  }`}
-                >
-                  <div className="flex items-center gap-2 text-xs font-black uppercase tracking-widest">
-                    {compliance.ready ? <ShieldCheck size={14} /> : <ShieldAlert size={14} />}
-                    <span>{compliance.score}/100</span>
-                  </div>
-                  <p className="mt-1 text-sm font-bold">{compliance.summary}</p>
-                </div>
-              )}
 
               <button
                 type="submit"

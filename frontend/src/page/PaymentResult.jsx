@@ -13,7 +13,6 @@ import {
   Wallet,
 } from "lucide-react";
 import Navbar from "../components/Navbar";
-import AnimatedPage from "../components/AnimatedPage";
 
 const TicketInfo = ({ icon: Icon, label, value, align = "left" }) => (
   <div className={`space-y-1 ${align === "right" ? "text-right" : ""}`}>
@@ -79,8 +78,7 @@ const PaymentResult = ({ user }) => {
   const { id, ten_kdl, dia_chi, ngay_den, ngay_tao, ma_tra_cuu, phuong_thuc, so_luong } = ticket;
 
   return (
-    <AnimatedPage>
-      <div className="min-h-screen bg-[#F8FAFC] pb-24 text-slate-800">
+    <div className="min-h-screen bg-[#F8FAFC] pb-24 text-slate-800">
         <Navbar user={user} />
         <div className="max-w-2xl mx-auto pt-10 px-4">
           <header className="text-center mb-10">
@@ -172,7 +170,6 @@ const PaymentResult = ({ user }) => {
           </footer>
         </div>
       </div>
-    </AnimatedPage>
   );
 };
 

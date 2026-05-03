@@ -1,6 +1,6 @@
 const db = require("../config/db");
 const { tableExists, columnExists } = require("../utils/dbFeature");
-const { ensurePlatformColumns } = require("../utils/platformSchema");
+const { ensurePlatformColumns, getPostCategories } = require("../utils/platformSchema");
 const { buildPostCompliance, normalizeMediaList } = require("../utils/postCompliance");
 
 const parseJsonArray = (value) => {
@@ -36,6 +36,21 @@ const ensureReviewTable = async () => {
   `);
 };
 
+const normalizeCategoryLabel = (category) => {
+  const normalized = String(category || "").trim().toLowerCase();
+  if (!normalized || normalized === "tong hop") return "Tổng hợp";
+  return category;
+};
+
+const resolveCategoryName = async (category) => {
+  const normalized = String(category || "").trim();
+  if (!normalized) return "Tổng hợp";
+
+  const categories = await getPostCategories();
+  const matched = categories.find((item) => item.ten.toLowerCase() === normalized.toLowerCase());
+  return matched?.ten || "Tổng hợp";
+};
+
 const mapPost = (post, hasCategoryColumn) => ({
   ...post,
   hinh_anh_json: parseJsonArray(post.hinh_anh_json),
@@ -51,7 +66,7 @@ const mapPost = (post, hasCategoryColumn) => ({
   diem_tin_cay: post.diem_tin_cay || 0,
   tong_danh_gia: post.tong_danh_gia || 0,
   diem_danh_gia: Number(post.diem_danh_gia || 0),
-  danh_muc: hasCategoryColumn ? post.danh_muc || "Tong hop" : "Tong hop",
+  danh_muc: hasCategoryColumn ? normalizeCategoryLabel(post.danh_muc) : "Tổng hợp",
 });
 
 exports.getAllPosts = async (req, res) => {
@@ -139,20 +154,21 @@ exports.createPost = async (req, res) => {
   try {
     await ensurePlatformColumns();
 
-    if (req.user.vai_tro !== "khu_du_lich") {
+    if (!["khach_du_lich", "khu_du_lich"].includes(req.user.vai_tro)) {
       return res.status(403).json({
         success: false,
-        message: "Chi tai khoan khu du lich moi duoc dang bai kham pha",
+        message: "Tài khoản hiện tại không được đăng bài",
       });
     }
 
     const { tieu_de, noi_dung, id_kdl_gan_the, ten_kdl_gan_the, danh_muc } = req.body;
     const id_nguoi_dung = req.user.id;
+    const categoryName = danh_muc ? await resolveCategoryName(danh_muc) : "Tổng hợp";
 
     if (!noi_dung || !noi_dung.trim()) {
       return res.status(400).json({
         success: false,
-        error: "Noi dung khong duoc de trong",
+        error: "Nội dung không được để trống",
       });
     }
 
@@ -163,11 +179,11 @@ exports.createPost = async (req, res) => {
     }));
     const imageList = mediaList.filter((item) => item.type === "image").map((item) => item.url);
     const compliance = buildPostCompliance({
-      title: tieu_de || "Kham pha",
+      title: tieu_de || "Khám phá",
       content: noi_dung,
       media: mediaList,
       taggedPlaceName: ten_kdl_gan_the,
-      category: danh_muc || "Tong hop",
+      category: categoryName,
     });
     const hasCategoryColumn = await columnExists("bai_viet", "danh_muc");
 
@@ -180,20 +196,20 @@ exports.createPost = async (req, res) => {
         `,
         [
           id_nguoi_dung,
-          tieu_de || "Kham pha",
+          tieu_de || "Khám phá",
           noi_dung,
           JSON.stringify(imageList),
           JSON.stringify(mediaList),
           id_kdl_gan_the || null,
           ten_kdl_gan_the || null,
-          danh_muc || "Tong hop",
+          categoryName,
           JSON.stringify(compliance),
         ],
       );
 
       return res.json({
         success: true,
-        message: "Thanh cong!",
+        message: "Thành công!",
         postId: result.insertId,
         compliance,
       });
@@ -207,7 +223,7 @@ exports.createPost = async (req, res) => {
       `,
       [
         id_nguoi_dung,
-        tieu_de || "Kham pha",
+        tieu_de || "Khám phá",
         noi_dung,
         JSON.stringify(imageList),
         JSON.stringify(mediaList),
@@ -219,7 +235,7 @@ exports.createPost = async (req, res) => {
 
     res.json({
       success: true,
-      message: "Thanh cong!",
+      message: "Thành công!",
       postId: result.insertId,
       compliance,
     });
@@ -236,7 +252,7 @@ exports.commentPost = async (req, res) => {
     if (!noi_dung || !noi_dung.trim()) {
       return res.status(400).json({
         success: false,
-        error: "Binh luan khong duoc de trong",
+        error: "Bình luận không được để trống",
       });
     }
 
@@ -245,7 +261,7 @@ exports.commentPost = async (req, res) => {
       [userId, id_bai_viet, noi_dung],
     );
 
-    res.json({ success: true, message: "Da binh luan!" });
+    res.json({ success: true, message: "Đã bình luận!" });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
   }
@@ -287,7 +303,7 @@ exports.likePost = async (req, res) => {
         "DELETE FROM luot_thich WHERE id_nguoi_dung = ? AND id_bai_viet = ?",
         [userId, id_bai_viet],
       );
-      return res.json({ success: true, liked: false, message: "Da bo thich" });
+      return res.json({ success: true, liked: false, message: "Đã bỏ thích" });
     }
 
     await db.query(
@@ -295,7 +311,7 @@ exports.likePost = async (req, res) => {
       [userId, id_bai_viet],
     );
 
-    res.json({ success: true, liked: true, message: "Da thich bai viet" });
+    res.json({ success: true, liked: true, message: "Đã thích bài viết" });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
   }
@@ -316,29 +332,32 @@ exports.updatePost = async (req, res) => {
     if (!existingPosts.length) {
       return res.status(404).json({
         success: false,
-        message: "Khong tim thay bai viet hoac ban khong co quyen",
+        message: "Không tìm thấy bài viết hoặc bạn không có quyền",
       });
     }
 
     const existingPost = existingPosts[0];
+    const categoryName = danh_muc
+      ? await resolveCategoryName(danh_muc)
+      : normalizeCategoryLabel(existingPost.danh_muc);
     const compliance = buildPostCompliance({
-      title: existingPost.tieu_de || "Kham pha",
+      title: existingPost.tieu_de || "Khám phá",
       content: noi_dung,
       media: parseJsonArray(existingPost.media_json),
       taggedPlaceName: existingPost.ten_kdl_gan_the,
-      category: hasCategoryColumn ? danh_muc || existingPost.danh_muc || "Tong hop" : "Tong hop",
+      category: hasCategoryColumn ? categoryName || normalizeCategoryLabel(existingPost.danh_muc) : "Tổng hợp",
     });
 
     const sql = hasCategoryColumn
       ? "UPDATE bai_viet SET noi_dung = ?, danh_muc = ?, kiem_duyet_so_json = ? WHERE id = ? AND id_nguoi_dung = ?"
       : "UPDATE bai_viet SET noi_dung = ?, kiem_duyet_so_json = ? WHERE id = ? AND id_nguoi_dung = ?";
     const params = hasCategoryColumn
-      ? [noi_dung, danh_muc || "Tong hop", JSON.stringify(compliance), id, req.user.id]
+      ? [noi_dung, categoryName, JSON.stringify(compliance), id, req.user.id]
       : [noi_dung, JSON.stringify(compliance), id, req.user.id];
 
     await db.query(sql, params);
 
-    res.json({ success: true, message: "Cap nhat thanh cong", compliance });
+    res.json({ success: true, message: "Cập nhật thành công", compliance });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
   }
@@ -356,11 +375,11 @@ exports.deletePost = async (req, res) => {
     if (result.affectedRows === 0) {
       return res.status(404).json({
         success: false,
-        message: "Khong tim thay bai viet hoac ban khong co quyen",
+        message: "Không tìm thấy bài viết hoặc bạn không có quyền",
       });
     }
 
-    res.json({ success: true, message: "Xoa thanh cong" });
+    res.json({ success: true, message: "Xóa thành công" });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
   }
@@ -384,7 +403,7 @@ exports.toggleSavePost = async (req, res) => {
       return res.json({
         success: true,
         saved: false,
-        message: "Da bo luu bai viet",
+        message: "Đã bỏ lưu bài viết",
       });
     }
 
@@ -393,7 +412,7 @@ exports.toggleSavePost = async (req, res) => {
       [userId, id_bai_viet],
     );
 
-    res.json({ success: true, saved: true, message: "Da luu bai viet" });
+    res.json({ success: true, saved: true, message: "Đã lưu bài viết" });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
   }
@@ -484,7 +503,7 @@ exports.getPostDetail = async (req, res) => {
       return res.json({
         success: false,
         post: null,
-        message: "Khong tim thay bai viet",
+        message: "Không tìm thấy bài viết",
       });
     }
 
@@ -516,14 +535,14 @@ exports.createReview = async (req, res) => {
     if (req.user.vai_tro !== "khach_du_lich") {
       return res.status(403).json({
         success: false,
-        message: "Chi khach du lich moi duoc danh gia bai viet",
+        message: "Chỉ khách du lịch mới được đánh giá bài viết",
       });
     }
 
     if (!id_kdl || !id_bai_viet || !so_sao) {
       return res.status(400).json({
         success: false,
-        message: "Thieu thong tin danh gia",
+        message: "Thiếu thông tin đánh giá",
       });
     }
 
@@ -533,7 +552,7 @@ exports.createReview = async (req, res) => {
     if (Number.isNaN(rating) || rating < 1 || rating > 5) {
       return res.status(400).json({
         success: false,
-        message: "So sao phai tu 1 den 5",
+        message: "Số sao phải từ 1 đến 5",
       });
     }
 
@@ -550,7 +569,7 @@ exports.createReview = async (req, res) => {
     if (!postRows.length) {
       return res.status(404).json({
         success: false,
-        message: "Khong tim thay bai viet khu du lich de danh gia",
+        message: "Không tìm thấy bài viết khu du lịch để đánh giá",
       });
     }
 
@@ -563,7 +582,7 @@ exports.createReview = async (req, res) => {
       [id_kdl, id_bai_viet, req.user.id, rating, noi_dung || null],
     );
 
-    res.json({ success: true, message: "Da danh gia" });
+    res.json({ success: true, message: "Đã đánh giá" });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
   }

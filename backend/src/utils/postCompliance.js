@@ -24,39 +24,39 @@ const buildPostCompliance = ({ title, content, media, taggedPlaceName, category 
   const checks = [
     {
       key: "title",
-      label: "Tieu de ro rang",
+      label: "Tiêu đề rõ ràng",
       passed: titleLength >= 6,
-      hint: titleLength >= 6 ? "Tieu de du mo ta bai viet." : "Nen dat tieu de toi thieu 6 ky tu.",
+      hint: titleLength >= 6 ? "Tiêu đề đã mô tả đủ bài viết." : "Nên đặt tiêu đề tối thiểu 6 ký tự.",
     },
     {
       key: "content",
-      label: "Noi dung mo ta",
+      label: "Nội dung mô tả",
       passed: contentLength >= 30,
       hint:
         contentLength >= 30
-          ? "Noi dung dat nguong mo ta co ban."
-          : "Nen mo ta toi thieu 30 ky tu de ro thong tin.",
+          ? "Nội dung đã đạt ngưỡng mô tả cơ bản."
+          : "Nên mô tả tối thiểu 30 ký tự để rõ thông tin.",
     },
     {
       key: "media",
-      label: "Tai nguyen so",
+      label: "Tài nguyên số",
       passed: normalizedMedia.length > 0,
       hint:
         normalizedMedia.length > 0
-          ? `Co ${images.length} anh va ${videos.length} video.`
-          : "Nen bo sung it nhat 1 anh hoac video.",
+          ? `Có ${images.length} ảnh và ${videos.length} video.`
+          : "Nên bổ sung ít nhất 1 ảnh hoặc video.",
     },
     {
       key: "location",
-      label: "Gan dia diem",
+      label: "Gắn địa điểm",
       passed: Boolean(taggedPlaceName),
-      hint: taggedPlaceName ? `Da gan ${taggedPlaceName}.` : "Nen gan dia diem de tang do tin cay.",
+      hint: taggedPlaceName ? `Đã gắn ${taggedPlaceName}.` : "Nên gắn địa điểm để tăng độ tin cậy.",
     },
     {
       key: "category",
-      label: "Danh muc noi dung",
+      label: "Danh mục nội dung",
       passed: Boolean(category),
-      hint: category ? `Danh muc: ${category}.` : "Nen chon danh muc phu hop.",
+      hint: category ? `Danh mục: ${category}.` : "Nên chọn danh mục phù hợp.",
     },
   ];
 
@@ -71,10 +71,10 @@ const buildPostCompliance = ({ title, content, media, taggedPlaceName, category 
     checks,
     summary:
       score >= 80
-        ? "Bai viet dat chuan co ban cho nen tang so."
+        ? "Bài viết đạt chuẩn cơ bản cho nền tảng số."
         : score >= 60
-          ? "Bai viet co the dang, nhung nen bo sung them thong tin."
-          : "Bai viet chua dat chuan toi thieu, nen cap nhat them.",
+          ? "Bài viết có thể đăng, nhưng nên bổ sung thêm thông tin."
+          : "Bài viết chưa đạt chuẩn tối thiểu, nên cập nhật thêm.",
     media: {
       total: normalizedMedia.length,
       images: images.length,

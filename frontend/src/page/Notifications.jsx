@@ -9,6 +9,24 @@ import {
 import toast from "react-hot-toast";
 import { buildUploadUrl } from "../config";
 
+const formatNotificationTimestamp = (value) => {
+  if (!value) return "--";
+
+  const date = new Date(value);
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const oneDayMs = 24 * 60 * 60 * 1000;
+
+  if (diffMs < oneDayMs) {
+    return date.toLocaleTimeString("vi-VN", {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  }
+
+  return date.toLocaleDateString("vi-VN");
+};
+
 const Notifications = ({ user }) => {
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -118,7 +136,7 @@ const Notifications = ({ user }) => {
                           <span className="font-medium">{noti.noi_dung}</span>
                         </p>
                         <div className="flex items-center gap-2 mt-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-tight">
-                          <Clock size={12} /> {new Date(noti.ngay_tao).toLocaleTimeString('vi-VN')} • {new Date(noti.ngay_tao).toLocaleDateString('vi-VN')}
+                          <Clock size={12} /> {formatNotificationTimestamp(noti.ngay_tao)}
                         </div>
                       </div>
 

@@ -3,7 +3,6 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { ArrowRight, MailSearch, RefreshCw, ShieldCheck } from "lucide-react";
 import toast from "react-hot-toast";
 import api from "../api";
-import AnimatedPage from "../components/AnimatedPage";
 import {
   clearVerifyOtpContext,
   getVerifyOtpContext,
@@ -102,8 +101,7 @@ const VerifyOTP = () => {
   };
 
   return (
-    <AnimatedPage>
-      <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[#F1F5F9] p-4">
+    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[#F1F5F9] p-4">
         <div className="absolute bottom-[-10%] left-[-10%] h-96 w-96 rounded-full bg-blue-200/50 blur-[100px]" />
 
         <div className="relative z-10 w-full max-w-md rounded-[3rem] border border-white bg-white p-10 text-center shadow-2xl shadow-slate-200">
@@ -175,7 +173,6 @@ const VerifyOTP = () => {
           </p>
         </div>
       </div>
-    </AnimatedPage>
   );
 };
 
