@@ -40,8 +40,15 @@ const broadcastLiveStreams = () => {
   io.emit('live:list', getSerializedStreams())
 }
 
-app.use(cors())
+app.use(
+  cors({
+    origin: allowedOrigin,
+  }),
+)
 app.use(express.json())
+app.get('/api/health', (_req, res) => {
+  res.status(200).json({ ok: true })
+})
 app.use('/api', allRoutes)
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')))
 

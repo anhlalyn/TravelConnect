@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { ArrowRight, Lock, Mail, Navigation, Sparkles } from "lucide-react";
 import toast from "react-hot-toast";
 import api from "../api";
+import { saveVerifyOtpContext } from "../utils/authFlowStorage";
 
 const Login = ({ setUser }) => {
   const [account, setAccount] = useState("");
@@ -17,15 +18,15 @@ const Login = ({ setUser }) => {
     const normalizedAccount = account.trim().toLowerCase();
 
     if (!normalizedAccount) {
-      nextErrors.account = "Vui lòng nhập tài khoản đăng nhập.";
+      nextErrors.account = "Vui lÃ²ng nháº­p tÃ i khoáº£n Ä‘Äƒng nháº­p.";
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedAccount)) {
-      nextErrors.account = "Tài khoản hiện tại sử dụng định dạng email.";
+      nextErrors.account = "TÃ i khoáº£n hiá»‡n táº¡i sá»­ dá»¥ng Ä‘á»‹nh dáº¡ng email.";
     }
 
     if (!password.trim()) {
-      nextErrors.password = "Vui lòng nhập mật khẩu.";
+      nextErrors.password = "Vui lÃ²ng nháº­p máº­t kháº©u.";
     } else if (password.length < 6) {
-      nextErrors.password = "Mật khẩu phải có ít nhất 6 ký tự.";
+      nextErrors.password = "Máº­t kháº©u pháº£i cÃ³ Ã­t nháº¥t 6 kÃ½ tá»±.";
     }
 
     setErrors(nextErrors);
@@ -37,12 +38,12 @@ const Login = ({ setUser }) => {
     const { isValid, normalizedAccount } = validateForm();
 
     if (!isValid) {
-      setStatusMessage("Thông tin đăng nhập chưa hợp lệ. Vui lòng kiểm tra lại.");
+      setStatusMessage("ThÃ´ng tin Ä‘Äƒng nháº­p chÆ°a há»£p lá»‡. Vui lÃ²ng kiá»ƒm tra láº¡i.");
       return;
     }
 
     setLoading(true);
-    setStatusMessage("Đang kiểm tra tài khoản và mật khẩu...");
+    setStatusMessage("Äang kiá»ƒm tra tÃ i khoáº£n vÃ  máº­t kháº©u...");
 
     try {
       const res = await api.post("/auth/login", {
@@ -55,12 +56,25 @@ const Login = ({ setUser }) => {
       window.dispatchEvent(new Event("auth-change"));
       setUser(res.data.user);
       setErrors({});
-      setStatusMessage("Đăng nhập thành công. Hệ thống đang chuyển hướng...");
+      setStatusMessage("ÄÄƒng nháº­p thÃ nh cÃ´ng. Há»‡ thá»‘ng Ä‘ang chuyá»ƒn hÆ°á»›ng...");
 
-      toast.success("Đăng nhập thành công!");
+      toast.success("ÄÄƒng nháº­p thÃ nh cÃ´ng!");
       navigate("/home");
     } catch (err) {
-      const message = err.response?.data?.message || "Sai tài khoản hoặc mật khẩu.";
+      const message = err.response?.data?.message || "Sai tÃ i khoáº£n hoáº·c máº­t kháº©u.";
+      const isUnverifiedAccount =
+        err.response?.status === 403 && /xác thực otp|xac thuc otp/i.test(message);
+
+      if (isUnverifiedAccount) {
+        saveVerifyOtpContext({ email: normalizedAccount, type: "register" });
+        setStatusMessage("Tài khoản chưa xác nhận OTP. Hệ thống đang chuyển bạn sang trang xác thực.");
+        toast.error("Tài khoản chưa xác nhận OTP.");
+        navigate("/verify-otp", {
+          state: { email: normalizedAccount, type: "register" },
+        });
+        return;
+      }
+
       setStatusMessage(message);
       toast.error(message);
     } finally {
@@ -82,7 +96,7 @@ const Login = ({ setUser }) => {
             TravelConnect
           </h1>
           <p className="mt-2 text-xs font-bold uppercase tracking-[0.2em] text-slate-400">
-            Bắt đầu hành trình mới
+            Báº¯t Ä‘áº§u hÃ nh trÃ¬nh má»›i
           </p>
         </div>
 
@@ -91,9 +105,9 @@ const Login = ({ setUser }) => {
           className="space-y-6 rounded-[3rem] border border-white bg-white p-10 shadow-2xl shadow-slate-200"
         >
           <div className="space-y-2 pb-2 text-center">
-            <h2 className="text-2xl font-black tracking-tight text-slate-800">Đăng nhập</h2>
+            <h2 className="text-2xl font-black tracking-tight text-slate-800">ÄÄƒng nháº­p</h2>
             <p className="text-sm font-medium italic text-slate-400">
-              Vui lòng nhập thông tin tài khoản của bạn
+              Vui lÃ²ng nháº­p thÃ´ng tin tÃ i khoáº£n cá»§a báº¡n
             </p>
           </div>
 
@@ -106,7 +120,7 @@ const Login = ({ setUser }) => {
           <div className="space-y-4">
             <div className="space-y-2">
               <label className="ml-4 text-[10px] font-black uppercase tracking-widest text-slate-400">
-                Tài khoản đăng nhập
+                TÃ i khoáº£n Ä‘Äƒng nháº­p
               </label>
               <div className="group relative">
                 <Mail
@@ -135,13 +149,13 @@ const Login = ({ setUser }) => {
             <div className="space-y-2">
               <div className="flex items-center justify-between px-4">
                 <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">
-                  Mật khẩu
+                  Máº­t kháº©u
                 </label>
                 <Link
                   to="/forgot-password"
                   className="text-[10px] font-bold uppercase text-indigo-500 transition-colors hover:text-indigo-700"
                 >
-                  Quên mật khẩu?
+                  QuÃªn máº­t kháº©u?
                 </Link>
               </div>
               <div className="group relative">
@@ -151,7 +165,7 @@ const Login = ({ setUser }) => {
                 />
                 <input
                   type="password"
-                  placeholder="••••••••"
+                  placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢"
                   value={password}
                   className={`w-full rounded-[1.5rem] border-2 bg-slate-50 py-4 pl-12 pr-4 font-bold text-slate-700 shadow-inner outline-none transition-all focus:bg-white ${
                     errors.password
@@ -174,17 +188,17 @@ const Login = ({ setUser }) => {
             disabled={loading}
             className="flex w-full items-center justify-center gap-3 rounded-[1.5rem] bg-indigo-600 py-5 text-xs font-black uppercase tracking-[0.2em] text-white shadow-xl shadow-indigo-100 transition-all active:scale-95 hover:bg-slate-900 disabled:opacity-50"
           >
-            {loading ? "Đang xác thực..." : <>Đăng nhập ngay <ArrowRight size={18} /></>}
+            {loading ? "Äang xÃ¡c thá»±c..." : <>ÄÄƒng nháº­p ngay <ArrowRight size={18} /></>}
           </button>
 
           <div className="pt-4 text-center">
             <p className="text-sm font-medium text-slate-400">
-              Bạn mới đến đây?{" "}
+              Báº¡n má»›i Ä‘áº¿n Ä‘Ã¢y?{" "}
               <Link
                 to="/register"
                 className="inline-flex items-center gap-1 font-black text-indigo-600 transition-colors hover:text-indigo-800"
               >
-                Đăng ký tài khoản <Sparkles size={14} />
+                ÄÄƒng kÃ½ tÃ i khoáº£n <Sparkles size={14} />
               </Link>
             </p>
           </div>

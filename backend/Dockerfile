@@ -1,4 +1,4 @@
-FROM node:20-slim AS base
+FROM node:20-slim AS dev
 
 WORKDIR /app
 
@@ -7,13 +7,25 @@ RUN npm install
 
 COPY . .
 
-FROM base AS dev
-
 EXPOSE 3000
 
 CMD ["npm", "run", "dev"]
 
-FROM base AS prod
+FROM node:20-slim AS prod-deps
+
+WORKDIR /app
+
+COPY package*.json ./
+RUN npm ci --omit=dev
+
+FROM node:20-slim AS prod
+
+WORKDIR /app
+
+ENV NODE_ENV=production
+
+COPY --from=prod-deps /app/node_modules ./node_modules
+COPY . .
 
 EXPOSE 3000
 

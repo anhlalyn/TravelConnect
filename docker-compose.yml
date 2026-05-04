@@ -4,10 +4,14 @@ services:
     container_name: travelconnect-db
     restart: unless-stopped
     environment:
-      MYSQL_ROOT_PASSWORD: root
-      MYSQL_DATABASE: travelconnect
-    ports:
-      - "3307:3306"
+      MYSQL_ROOT_PASSWORD: ${DB_PASS:?set DB_PASS}
+      MYSQL_DATABASE: ${DB_NAME:-travelconnect}
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-p${DB_PASS:?set DB_PASS}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
     volumes:
       - mysql_data:/var/lib/mysql
       - ./database/travelconnect.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
@@ -15,50 +19,56 @@ services:
   backend:
     build:
       context: ./backend
-      target: dev
+      target: prod
     container_name: travelconnect-backend
     restart: unless-stopped
     depends_on:
-      - db
+      db:
+        condition: service_healthy
     environment:
       PORT: 3000
       DB_HOST: db
-      DB_USER: root
-      DB_PASS: root
-      DB_NAME: travelconnect
-      JWT_SECRET: travelconnect-secret
-      CLIENT_URL: http://localhost:5173
-      DEFAULT_ADMIN_EMAIL: admin@travelconnect.vn
-      DEFAULT_ADMIN_PASSWORD: Admin@12345
-      DEFAULT_ADMIN_NAME: Quan tri TravelConnect
-      EMAIL_USER: your-email@example.com
-      EMAIL_PASS: your-app-password
-    command: npm run dev -- --legacy-watch
-    ports:
-      - "3000:3000"
+      DB_USER: ${DB_USER:-root}
+      DB_PASS: ${DB_PASS:?set DB_PASS}
+      DB_NAME: ${DB_NAME:-travelconnect}
+      JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET}
+      CLIENT_URL: ${CLIENT_URL:?set CLIENT_URL}
+      DEFAULT_ADMIN_EMAIL: ${DEFAULT_ADMIN_EMAIL:-admin@travelconnect.vn}
+      DEFAULT_ADMIN_PASSWORD: ${DEFAULT_ADMIN_PASSWORD:-Admin@12345}
+      DEFAULT_ADMIN_NAME: ${DEFAULT_ADMIN_NAME:-Quan tri TravelConnect}
+      EMAIL_USER: ${EMAIL_USER:?set EMAIL_USER}
+      EMAIL_PASS: ${EMAIL_PASS:?set EMAIL_PASS}
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "require('http').get('http://127.0.0.1:3000/api/health', (res) => process.exit(res.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))",
+        ]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
     volumes:
-      - ./backend:/app
-      - /app/node_modules
-      - ./backend/uploads:/app/uploads
+      - uploads_data:/app/uploads
 
   frontend:
     build:
       context: ./frontend
-      target: dev
+      target: prod
+      args:
+        VITE_API_BASE_URL: /api
+        VITE_APP_BASE_URL: ""
+        VITE_SOCKET_URL: ""
     container_name: travelconnect-frontend
     restart: unless-stopped
     depends_on:
-      - backend
-    environment:
-      VITE_API_BASE_URL: http://localhost:3000/api
-      VITE_APP_BASE_URL: http://localhost:3000
-      VITE_SOCKET_URL: http://localhost:3000
-      CHOKIDAR_USEPOLLING: "true"
+      backend:
+        condition: service_healthy
     ports:
-      - "5173:5173"
-    volumes:
-      - ./frontend:/app
-      - /app/node_modules
+      - "80:80"
 
 volumes:
   mysql_data:
+  uploads_data:
