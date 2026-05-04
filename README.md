@@ -171,6 +171,6 @@ Xem thêm:
 - Backend có cơ chế tự tạo tài khoản admin mặc định
 
 ## Thành viên thực hiện
-Phan Đình Luyến - 22050036
-Vũ Duy Hoàng - 22050038
-Nguyễn Hoàng Vũ - 22050072
+- Phan Đình Luyến - 22050036
+- Vũ Duy Hoàng - 22050038
+- Nguyễn Hoàng Vũ - 22050072
