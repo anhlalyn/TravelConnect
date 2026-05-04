@@ -115,6 +115,17 @@ async function ensurePlatformColumns() {
     `);
   }
 
+  await db.query(`
+    UPDATE ho_so_khu_du_lich hs
+    JOIN nguoi_dung nd ON nd.id = hs.id_nguoi_dung
+    SET
+      hs.trang_thai_duyet = 'verified',
+      hs.ghi_chu_duyet = COALESCE(NULLIF(hs.ghi_chu_duyet, ''), 'Tu dong duyet tai khoan khu du lich'),
+      hs.ngay_duyet = COALESCE(hs.ngay_duyet, NOW())
+    WHERE nd.vai_tro = 'khu_du_lich'
+      AND (hs.trang_thai_duyet IS NULL OR hs.trang_thai_duyet = 'pending')
+  `);
+
   const hasMediaColumn = await columnExists("bai_viet", "media_json");
   if (!hasMediaColumn) {
     await db.query(`

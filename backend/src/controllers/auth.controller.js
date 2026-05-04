@@ -153,6 +153,35 @@ exports.verifyOTP = async (req, res) => {
 
     if (resolvedOtpType === "register") {
       await db.query("UPDATE nguoi_dung SET da_xac_thuc_otp = 1 WHERE email = ?", [email]);
+
+      const [registeredUsers] = await db.query(
+        "SELECT id, ten, vai_tro FROM nguoi_dung WHERE email = ? LIMIT 1",
+        [email],
+      );
+
+      const registeredUser = registeredUsers[0];
+
+      if (registeredUser?.vai_tro === "khu_du_lich") {
+        await db.query(
+          `
+            INSERT INTO ho_so_khu_du_lich (
+              id_nguoi_dung,
+              ten_khu_du_lich,
+              trang_thai_duyet,
+              ghi_chu_duyet,
+              ngay_duyet
+            )
+            VALUES (?, ?, 'verified', 'Tu dong duyet khi dang ky tai khoan', NOW())
+            ON DUPLICATE KEY UPDATE
+              ten_khu_du_lich = COALESCE(ten_khu_du_lich, VALUES(ten_khu_du_lich)),
+              trang_thai_duyet = 'verified',
+              ghi_chu_duyet = 'Tu dong duyet khi dang ky tai khoan',
+              ngay_duyet = NOW()
+          `,
+          [registeredUser.id, registeredUser.ten],
+        );
+      }
+
       await db.query("UPDATE otp_xac_thuc SET da_su_dung = 1 WHERE id = ?", [records[0].id]);
     }
 

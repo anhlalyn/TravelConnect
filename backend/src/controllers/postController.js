@@ -69,6 +69,40 @@ const mapPost = (post, hasCategoryColumn) => ({
   danh_muc: hasCategoryColumn ? normalizeCategoryLabel(post.danh_muc) : "Tổng hợp",
 });
 
+const getPostById = async ({ postId, viewerId, hasCategoryColumn }) => {
+  const [posts] = await db.query(
+    `
+      SELECT bv.*${hasCategoryColumn ? ", bv.danh_muc" : ""},
+             nd.ten AS ten_nguoi_dang,
+             nd.anh_dai_dien,
+             nd.vai_tro,
+             nd.diem_tin_cay,
+             hs.ten_khu_du_lich,
+             hs.tinh_thanh,
+             hs.dia_chi_chi_tiet,
+             COUNT(DISTINCT lt.id) AS tong_luot_thich,
+             COUNT(DISTINCT bl.id) AS tong_binh_luan,
+             COUNT(DISTINCT dg.id) AS tong_danh_gia,
+             ROUND(AVG(dg.so_sao), 1) AS diem_danh_gia,
+             MAX(CASE WHEN lt.id_nguoi_dung = ? THEN 1 ELSE 0 END) AS da_thich,
+             MAX(CASE WHEN bvl.id_nguoi_dung IS NOT NULL THEN 1 ELSE 0 END) AS da_luu
+      FROM bai_viet bv
+      JOIN nguoi_dung nd ON bv.id_nguoi_dung = nd.id
+      LEFT JOIN ho_so_khu_du_lich hs ON hs.id_nguoi_dung = nd.id
+      LEFT JOIN luot_thich lt ON bv.id = lt.id_bai_viet
+      LEFT JOIN binh_luan bl ON bv.id = bl.id_bai_viet
+      LEFT JOIN danh_gia_kdl dg ON bv.id = dg.id_bai_viet
+      LEFT JOIN bai_viet_da_luu bvl ON bv.id = bvl.id_bai_viet AND bvl.id_nguoi_dung = ?
+      WHERE bv.id = ?
+      GROUP BY bv.id
+      LIMIT 1
+    `,
+    [viewerId, viewerId, postId],
+  );
+
+  return posts.length ? mapPost(posts[0], hasCategoryColumn) : null;
+};
+
 exports.getAllPosts = async (req, res) => {
   const userId = Number(req.user.id);
   const { mode } = req.query;
@@ -82,6 +116,7 @@ exports.getAllPosts = async (req, res) => {
     let params = [];
 
     if (mode === "explore") {
+      const prioritizeOwnPosts = req.user.vai_tro === "khu_du_lich";
       sql = `
         SELECT bv.*${hasCategoryColumn ? ", bv.danh_muc" : ""},
                nd.ten AS ten_nguoi_dang,
@@ -106,9 +141,11 @@ exports.getAllPosts = async (req, res) => {
         LEFT JOIN bai_viet_da_luu bvl ON bv.id = bvl.id_bai_viet AND bvl.id_nguoi_dung = ?
         WHERE nd.vai_tro = 'khu_du_lich'
         GROUP BY bv.id
-        ORDER BY diem_danh_gia DESC, tong_danh_gia DESC, tong_luot_thich DESC, bv.ngay_tao DESC
+        ORDER BY ${
+          prioritizeOwnPosts ? "CASE WHEN bv.id_nguoi_dung = ? THEN 0 ELSE 1 END," : ""
+        } diem_danh_gia DESC, tong_danh_gia DESC, tong_luot_thich DESC, bv.ngay_tao DESC
       `;
-      params = [userId, userId];
+      params = prioritizeOwnPosts ? [userId, userId, userId] : [userId, userId];
     } else {
       sql = `
         SELECT bv.*${hasCategoryColumn ? ", bv.danh_muc" : ""},
