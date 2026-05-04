@@ -28,6 +28,7 @@ dinhluyenvipro@gmail.com
 Tai thu muc goc du an, chay:
 
 ```bash
+copy .env.example .env
 docker compose --profile dev up --build
 ```
 
@@ -40,4 +41,4 @@ Sau khi chay:
 ## Ghi chu
 
 - File `docker-compose.yml` la file Compose duy nhat, co profile `dev` va `prod`, va dung MySQL 8.
-- Neu ban dung OTP email, hay thay `EMAIL_USER` va `EMAIL_PASS` trong `docker-compose.yml` bang thong tin that.
+- O profile `dev`, hay copy `.env.example` thanh `.env` va dien `EMAIL_USER`, `EMAIL_PASS` truoc khi chay Docker.

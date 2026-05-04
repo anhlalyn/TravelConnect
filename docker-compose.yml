@@ -58,8 +58,8 @@ services:
       DEFAULT_ADMIN_EMAIL: admin@travelconnect.vn
       DEFAULT_ADMIN_PASSWORD: Admin@12345
       DEFAULT_ADMIN_NAME: Quan tri TravelConnect
-      EMAIL_USER: ${EMAIL_USER:-}
-      EMAIL_PASS: ${EMAIL_PASS:-}
+      EMAIL_USER: ${EMAIL_USER:?set EMAIL_USER in .env}
+      EMAIL_PASS: ${EMAIL_PASS:?set EMAIL_PASS in .env}
     command: npm run dev -- --legacy-watch
     ports:
       - "3000:3000"
@@ -120,8 +120,8 @@ services:
       DEFAULT_ADMIN_EMAIL: ${DEFAULT_ADMIN_EMAIL:-admin@travelconnect.vn}
       DEFAULT_ADMIN_PASSWORD: ${DEFAULT_ADMIN_PASSWORD:-Admin@12345}
       DEFAULT_ADMIN_NAME: ${DEFAULT_ADMIN_NAME:-Quan tri TravelConnect}
-      EMAIL_USER: ${EMAIL_USER:-}
-      EMAIL_PASS: ${EMAIL_PASS:-}
+      EMAIL_USER: ${EMAIL_USER:?set EMAIL_USER in .env}
+      EMAIL_PASS: ${EMAIL_PASS:?set EMAIL_PASS in .env}
     healthcheck:
       test:
         [
