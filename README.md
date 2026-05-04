@@ -31,7 +31,7 @@ TravelConnect/
 ├─ frontend/          # Ứng dụng client React + Vite
 ├─ database/          # File SQL khởi tạo dữ liệu
 ├─ docs/              # Tài liệu và sơ đồ hệ thống
-├─ docker-compose.yml # Môi trường chạy local đầy đủ
+├─ docker-compose.yml # Một file Compose duy nhất cho dev và prod
 └─ README.md
 ```
 
@@ -91,7 +91,7 @@ TravelConnect/
 Tại thư mục gốc của dự án:
 
 ```bash
-docker compose up --build
+docker compose --profile dev up --build
 ```
 
 Sau khi chạy xong:
@@ -101,9 +101,15 @@ Sau khi chạy xong:
 - Thư mục upload: `http://localhost:3000/uploads`
 - MySQL: `localhost:3307`
 
+Chạy môi trường production từ cùng file:
+
+```bash
+docker compose --profile prod up --build
+```
+
 ## Ghi chú môi trường
 
-Cấu hình Docker hiện đã có sẵn các biến môi trường để chạy local:
+Cấu hình profile `dev` đã có sẵn các biến môi trường để chạy local:
 
 - `DB_HOST=db`
 - `DB_USER=root`
@@ -113,7 +119,7 @@ Cấu hình Docker hiện đã có sẵn các biến môi trường để chạy
 - `JWT_SECRET=travelconnect-secret`
 - `CLIENT_URL=http://localhost:5173`
 
-Nếu muốn chức năng gửi OTP hoạt động thật, hãy cập nhật trong `docker-compose.yml`:
+Nếu muốn chức năng gửi OTP hoạt động thật, hãy cập nhật trong `docker-compose.yml` hoặc truyền biến môi trường khi chạy profile `prod`:
 
 - `EMAIL_USER`
 - `EMAIL_PASS`

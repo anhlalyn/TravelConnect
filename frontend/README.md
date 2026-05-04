@@ -28,16 +28,16 @@ dinhluyenvipro@gmail.com
 Tai thu muc goc du an, chay:
 
 ```bash
-docker compose up --build
+docker compose --profile dev up --build
 ```
 
 Sau khi chay:
 
-- Frontend: `http://localhost:8080`
+- Frontend: `http://localhost:5173`
 - Backend API: `http://localhost:3000/api`
 - MySQL: `localhost:3307`
 
 ## Ghi chu
 
-- File `docker-compose.yml` dung MySQL 8 va tu dong nap `backend/travelconnect_complete.sql` khi khoi tao lan dau.
+- File `docker-compose.yml` la file Compose duy nhat, co profile `dev` va `prod`, va dung MySQL 8.
 - Neu ban dung OTP email, hay thay `EMAIL_USER` va `EMAIL_PASS` trong `docker-compose.yml` bang thong tin that.
