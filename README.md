@@ -1,182 +1,200 @@
 # TravelConnect
 
-TravelConnect là nền tảng du lịch kết hợp mạng xã hội, giúp kết nối khách du lịch, đối tác khu du lịch và quản trị viên trong cùng một hệ thống. Người dùng có thể khám phá điểm đến, đăng bài chia sẻ, đặt vé, thanh toán bằng ví nội bộ, quản lý dịch vụ, nhắn tin thời gian thực và theo dõi hoạt động booking.
+TravelConnect la nen tang du lich ket hop mang xa hoi, ket noi khach du lich, doi tac khu du lich va quan tri vien trong cung mot he thong. Ung dung ho tro kham pha diem den, dang bai viet, dat ve, thanh toan, nhan tin thoi gian thuc va quan ly hoat dong booking.
 
-## Điểm nổi bật
+## Tong quan
 
-- Xác thực tài khoản bằng OTP qua email
-- Hỗ trợ 2 vai trò chính: khách du lịch và đối tác khu du lịch
-- Trang khám phá dành cho bài viết của khu du lịch
-- Đăng bài với ảnh và video
-- Thích, bình luận, lưu bài viết và đánh giá
-- Đặt vé và check-in bằng mã QR
-- Thanh toán qua ví nội bộ và theo dõi lịch sử thanh toán
-- Quản lý dịch vụ và thống kê cho khu du lịch
-- Kết bạn, nhắn tin và livestream
-- Trang quản trị cho người dùng, khu du lịch, booking, thanh toán, danh mục và cấu hình hệ thống
-
-## Công nghệ sử dụng
-
-- Frontend: React, Vite, Tailwind CSS, React Router, Axios, Framer Motion, Socket.IO Client
-- Backend: Node.js, Express, MySQL, JWT, Multer, Nodemailer, Socket.IO
-- Cơ sở dữ liệu: MySQL 8
+- Frontend: React + Vite
+- Backend: Node.js + Express
+- Database: MySQL 8
 - Realtime: Socket.IO
-- Môi trường chạy: Docker Compose
+- Upload: luu tai `backend/uploads/`
+- Moi truong chay: Docker Compose
 
-## Cấu trúc thư mục
+## Tinh nang chinh
+
+- Dang ky tai khoan va xac thuc OTP qua email
+- Dang nhap, quen mat khau, dat lai mat khau
+- Dang bai viet voi anh va video
+- Thich, binh luan, luu bai viet va danh gia
+- Dat ve, thanh toan va check-in bang QR
+- Quan ly dich vu, booking va thong ke cho khu du lich
+- Nhan tin, ket ban, livestream va goi trong thoi gian thuc
+- Dashboard quan tri cho nguoi dung, bai viet, booking va cau hinh he thong
+
+## Cau truc thu muc
 
 ```text
-TravelConnect/
-├─ backend/           # API Express, socket server, controllers, routes
-├─ frontend/          # Ứng dụng client React + Vite
-├─ database/          # File SQL khởi tạo dữ liệu
-├─ docs/              # Tài liệu và sơ đồ hệ thống
-├─ docker-compose.yml # Một file Compose duy nhất cho dev và prod
-└─ README.md
+ChuyenDe/
+|- backend/              API Express, Socket.IO, business logic
+|- frontend/             Client React + Vite
+|- database/             SQL khoi tao du lieu
+|- docs/                 Tai lieu bo sung
+|- uploads/              Tep upload ngoai Docker
+|- docker-compose.yml    Mot file Compose cho dev va prod
+|- .env.example          Mau bien moi truong cho Docker
+`- README.md
 ```
 
-## Vai trò trong hệ thống
+## Chay nhanh bang Docker
 
-- `Khách du lịch`: khám phá nội dung, tương tác bài viết, đặt vé, thanh toán, theo dõi booking
-- `Đối tác khu du lịch`: quản lý hồ sơ, đăng bài giới thiệu, quản lý dịch vụ, xử lý booking
-- `Quản trị viên`: quản lý người dùng, theo dõi hệ thống, quản lý danh mục và cấu hình nền tảng
+### 1. Tao file `.env`
 
-## Chức năng chính
+Tai thu muc goc du an:
 
-### 1. Xác thực và hồ sơ
+```powershell
+copy .env.example .env
+```
 
-- Đăng ký tài khoản theo vai trò
-- Xác thực OTP qua email
-- Đăng nhập bằng JWT
-- Quên mật khẩu và đặt lại mật khẩu
-- Cập nhật hồ sơ cá nhân, ảnh đại diện và ảnh bìa khu du lịch
+Mo file [`.env.example`](</e:/Deadline/ChuyenDe2/ChuyenDe/.env.example>) vua copy thanh `.env` va dien thong tin that:
 
-### 2. Khám phá và mạng xã hội
+```env
+EMAIL_USER=yourgmail@gmail.com
+EMAIL_PASS=your_16_char_gmail_app_password
+```
 
-- Xem bài viết từ các khu du lịch
-- Lọc theo danh mục và tìm kiếm nội dung
-- Đăng bài với nhiều loại media
-- Thích, bình luận, lưu bài viết và đánh giá
-- Gợi ý bạn bè và gửi lời mời kết bạn
+Luu y:
 
-### 3. Booking và thanh toán
+- `EMAIL_PASS` phai la Gmail App Password, khong phai mat khau Gmail thuong
+- neu thay doi app password, can cap nhat lai file `.env`
 
-- Xem dịch vụ của khu du lịch
-- Tạo hóa đơn trước khi thanh toán
-- Thanh toán bằng ví nội bộ
-- Tạo booking sau khi thanh toán thành công
-- Sinh mã vé và mã QR
-- Quét QR khi check-in
+### 2. Chay profile `dev`
 
-### 4. Vận hành khu du lịch
-
-- Cập nhật hồ sơ khu du lịch
-- Thêm, sửa, xóa gói dịch vụ
-- Xem danh sách booking và chi tiết booking
-- Xác nhận, hủy và hoàn tất booking
-- Theo dõi thống kê và đánh giá
-
-### 5. Quản trị hệ thống
-
-- Theo dõi người dùng, booking, thanh toán và bài viết mới
-- Khóa và mở khóa tài khoản
-- Quản lý trạng thái hồ sơ khu du lịch
-- Quản lý tỷ lệ hoa hồng giới thiệu
-- Thêm, sửa, xóa danh mục bài viết
-
-## Hướng dẫn chạy dự án
-
-### Cách 1: Chạy bằng Docker Compose
-
-Tại thư mục gốc của dự án:
-
-```bash
+```powershell
 docker compose --profile dev up --build
 ```
 
-Sau khi chạy xong:
+Sau khi chay xong:
 
 - Frontend: `http://localhost:5173`
 - Backend API: `http://localhost:3000/api`
-- Thư mục upload: `http://localhost:3000/uploads`
+- Uploads: `http://localhost:3000/uploads`
 - MySQL: `localhost:3307`
 
-Chạy môi trường production từ cùng file:
+### 3. Neu da tung chay va bi dung container cu
 
-```bash
-docker compose --profile prod up --build
+```powershell
+docker compose --profile dev down
+docker rm -f travelconnect-db travelconnect-backend travelconnect-frontend
+docker compose --profile dev up --build
 ```
 
-## Ghi chú môi trường
+## OTP email khi chay Docker
 
-Cấu hình profile `dev` đã có sẵn các biến môi trường để chạy local:
+Ban Docker hien tai duoc cau hinh de gui OTP that ra email, khong dung mailbox test noi bo.
 
-- `DB_HOST=db`
-- `DB_USER=root`
-- `DB_PASS=root`
-- `DB_NAME=travelconnect`
-- `PORT=3000`
-- `JWT_SECRET=travelconnect-secret`
-- `CLIENT_URL=http://localhost:5173`
+Dieu kien de OTP gui duoc:
 
-Nếu muốn chức năng gửi OTP hoạt động thật, hãy cập nhật trong `docker-compose.yml` hoặc truyền biến môi trường khi chạy profile `prod`:
+- file `.env` phai ton tai o thu muc goc
+- `EMAIL_USER` va `EMAIL_PASS` phai hop le
+- tai khoan Gmail phai bat `2-Step Verification`
+- `EMAIL_PASS` phai la `App Password`
 
-- `EMAIL_USER`
-- `EMAIL_PASS`
+Neu OTP khong gui duoc, kiem tra:
 
-## Tài khoản quản trị mặc định
+```powershell
+docker compose --profile dev logs backend --tail 100
+```
 
-- Email: `admin@travelconnect.vn`
-- Mật khẩu: `Admin@12345`
+Loi thuong gap:
 
-## Chạy local không dùng Docker
+- `Missing credentials for "PLAIN"`: chua co `EMAIL_USER` hoac `EMAIL_PASS`
+- `Username and Password not accepted`: sai app password hoac app password da bi thu hoi
+- `The "EMAIL_USER" variable is not set`: chua tao file `.env` dung cho Docker
+
+## Chay local khong dung Docker
 
 ### Backend
 
-```bash
+```powershell
 cd backend
 npm install
 npm run dev
 ```
 
+Can cau hinh them file `backend/.env` dua theo [backend/.env.example](</e:/Deadline/ChuyenDe2/ChuyenDe/backend/.env.example>).
+
 ### Frontend
 
-```bash
+```powershell
 cd frontend
 npm install
 npm run dev
 ```
 
-Bạn cũng cần chuẩn bị:
+Neu can, co the tao file env rieng cho frontend dua theo [frontend/.env.example](</e:/Deadline/ChuyenDe2/ChuyenDe/frontend/.env.example>).
 
-- Một MySQL server đang chạy
-- Một database tên `travelconnect`
-- Import dữ liệu từ `database/travelconnect.sql`
-- Cấu hình biến môi trường cho backend
+## Docker profiles
 
-## Các nhóm API chính
+### `dev`
 
-- `/api/auth` - xác thực, OTP, hồ sơ người dùng
-- `/api/posts` - bài viết, bình luận, lượt thích, lưu bài, đánh giá
-- `/api/bookings` - booking và xác thực QR
-- `/api/payments` - tạo hóa đơn, thanh toán, nạp tiền
-- `/api/businesses` - hồ sơ và dịch vụ khu du lịch
-- `/api/messages` - phòng chat và tin nhắn
-- `/api/admin` - dashboard quản trị và cấu hình nền tảng
+- Backend chay target `dev`
+- Frontend chay Vite dev server
+- MySQL map ra `3307`
+- Yeu cau `EMAIL_USER` va `EMAIL_PASS` trong `.env`
 
-## Tài liệu
+### `prod`
 
-Xem thêm:
+```powershell
+docker compose --profile prod up --build
+```
 
-- [Sơ đồ hệ thống](docs/so-do-he-thong.md)
+- Backend chay target `prod`
+- Frontend build static va phuc vu bang Nginx
+- Frontend map ra `http://localhost`
 
-## Lưu ý
+## Bien moi truong quan trong
 
-- File upload được lưu trong `backend/uploads/`
-- Cơ sở dữ liệu được khởi tạo từ `database/travelconnect.sql` khi Docker chạy lần đầu
-- Backend có cơ chế tự tạo tài khoản admin mặc định
+### Docker root `.env`
 
-## Thành viên thực hiện
-- Phan Đình Luyến - 22050036
-- Vũ Duy Hoàng - 22050038
-- Nguyễn Hoàng Vũ - 22050072
+- `EMAIL_USER`: dia chi Gmail gui OTP
+- `EMAIL_PASS`: Gmail App Password
+
+### Backend runtime
+
+- `PORT`
+- `DB_HOST`
+- `DB_USER`
+- `DB_PASS`
+- `DB_NAME`
+- `JWT_SECRET`
+- `CLIENT_URL`
+- `DEFAULT_ADMIN_EMAIL`
+- `DEFAULT_ADMIN_PASSWORD`
+- `DEFAULT_ADMIN_NAME`
+
+Trong profile `dev`, phan lon bien backend da duoc gan san trong Compose. Ban thuong chi can them `EMAIL_USER` va `EMAIL_PASS`.
+
+## Tai khoan admin mac dinh
+
+- Email: `admin@travelconnect.vn`
+- Mat khau: `Admin@12345`
+
+Backend co co che tu tao tai khoan admin mac dinh neu chua ton tai trong database.
+
+## Cac nhom API chinh
+
+- `/api/auth`: dang ky, dang nhap, OTP, quen mat khau
+- `/api/posts`: bai viet, binh luan, like, save, danh gia
+- `/api/bookings`: dat ve va xac thuc QR
+- `/api/payments`: hoa don, thanh toan, nap tien
+- `/api/businesses`: ho so va dich vu khu du lich
+- `/api/messages`: phong chat va tin nhan
+- `/api/admin`: dashboard va quan tri he thong
+
+## Ghi chu
+
+- File SQL khoi tao nam o [database/travelconnect.sql](</e:/Deadline/ChuyenDe2/ChuyenDe/database/travelconnect.sql>)
+- Uploads duoc mount tu `./backend/uploads`
+- File [docker-compose.yml](</e:/Deadline/ChuyenDe2/ChuyenDe/docker-compose.yml>) la nguon cau hinh chay Docker chinh
+- File [`.env`](</e:/Deadline/ChuyenDe2/ChuyenDe/.env>) da duoc ignore trong Git de tranh lo thong tin mail
+
+## Tai lieu
+
+- [So do he thong](docs/so-do-he-thong.md)
+
+## Thanh vien thuc hien
+
+- Phan Dinh Luyen - 22050036
+- Vu Duy Hoang - 22050038
+- Nguyen Hoang Vu - 22050072
