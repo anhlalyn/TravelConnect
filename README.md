@@ -46,7 +46,7 @@ Tai thu muc goc du an:
 copy .env.example .env
 ```
 
-Mo file [`.env.example`](</e:/Deadline/ChuyenDe2/ChuyenDe/.env.example>) vua copy thanh `.env` va dien thong tin that:
+Mo file [`.env.example`] vua copy thanh `.env` va dien thong tin that:
 
 ```env
 EMAIL_USER=yourgmail@gmail.com
@@ -112,7 +112,7 @@ npm install
 npm run dev
 ```
 
-Can cau hinh them file `backend/.env` dua theo [backend/.env.example](</e:/Deadline/ChuyenDe2/ChuyenDe/backend/.env.example>).
+Can cau hinh them file `backend/.env` dua theo [backend/.env.example]
 
 ### Frontend
 
@@ -122,8 +122,7 @@ npm install
 npm run dev
 ```
 
-Neu can, co the tao file env rieng cho frontend dua theo [frontend/.env.example](</e:/Deadline/ChuyenDe2/ChuyenDe/frontend/.env.example>).
-
+Neu can, co the tao file env rieng cho frontend dua theo [frontend/.env.example]
 ## Docker profiles
 
 ### `dev`
@@ -184,10 +183,10 @@ Backend co co che tu tao tai khoan admin mac dinh neu chua ton tai trong databas
 
 ## Ghi chu
 
-- File SQL khoi tao nam o [database/travelconnect.sql](</e:/Deadline/ChuyenDe2/ChuyenDe/database/travelconnect.sql>)
+- File SQL khoi tao nam o [database/travelconnect.sql]
 - Uploads duoc mount tu `./backend/uploads`
-- File [docker-compose.yml](</e:/Deadline/ChuyenDe2/ChuyenDe/docker-compose.yml>) la nguon cau hinh chay Docker chinh
-- File [`.env`](</e:/Deadline/ChuyenDe2/ChuyenDe/.env>) da duoc ignore trong Git de tranh lo thong tin mail
+- File [docker-compose.yml] la nguon cau hinh chay Docker chinh
+- File [`.env`] da duoc ignore trong Git de tranh lo thong tin mail
 
 ## Tai lieu
 

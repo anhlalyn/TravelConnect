@@ -1,7 +1,10 @@
 const db = require("../config/db");
 const crypto = require("crypto");
 const { createNotification } = require("../utils/notification");
-const { ensurePlatformColumns, getPlatformSetting } = require("../utils/platformSchema");
+const {
+  ensurePlatformColumns,
+  getPlatformSetting,
+} = require("../utils/platformSchema");
 
 exports.createInvoice = async (req, res) => {
   const id_nguoi_mua = req.user.id;
@@ -76,7 +79,13 @@ exports.createInvoice = async (req, res) => {
 
 exports.executePayment = async (req, res) => {
   const id_nguoi_mua = req.user.id;
-  const { invoiceId, ghi_chu, linked_destination_ids } = req.body;
+  const {
+    invoiceId,
+    ghi_chu,
+    linked_destination_ids,
+    selected_services,
+    linked_services,
+  } = req.body;
   const connection = await db.getConnection();
   await connection.beginTransaction();
 
@@ -101,18 +110,28 @@ exports.executePayment = async (req, res) => {
       [id_nguoi_mua],
     );
 
-    if (users[0].so_du < invoice.tong_tien) {
+    const balance = Number(users[0].so_du || 0);
+    const total = Number(invoice.tong_tien || 0);
+
+    if (!Number.isFinite(balance) || !Number.isFinite(total)) {
+      throw new Error("Dữ liệu thanh toán không hợp lệ.");
+    }
+
+    if (balance < total) {
       throw new Error("Số dư ví không đủ để thanh toán.");
     }
 
     const ma_tra_cuu = crypto.randomBytes(3).toString("hex").toUpperCase();
 
-    await connection.query("UPDATE nguoi_dung SET so_du = so_du - ? WHERE id = ?", [
-      invoice.tong_tien,
-      id_nguoi_mua,
-    ]);
+    await connection.query(
+      "UPDATE nguoi_dung SET so_du = so_du - ? WHERE id = ?",
+      [invoice.tong_tien, id_nguoi_mua],
+    );
 
-    if (invoice.id_nguoi_gioi_thieu && invoice.id_nguoi_gioi_thieu !== id_nguoi_mua) {
+    if (
+      invoice.id_nguoi_gioi_thieu &&
+      invoice.id_nguoi_gioi_thieu !== id_nguoi_mua
+    ) {
       const [referrers] = await connection.query(
         "SELECT id, vai_tro FROM nguoi_dung WHERE id = ? LIMIT 1",
         [invoice.id_nguoi_gioi_thieu],
@@ -123,15 +142,18 @@ exports.executePayment = async (req, res) => {
         referrers[0].vai_tro === "khach_du_lich" &&
         Number(invoice.id_nguoi_gioi_thieu) !== Number(invoice.id_kdl)
       ) {
-        const commissionConfig = await getPlatformSetting("referral_commission_rate", { value: 0.1 });
+        const commissionConfig = await getPlatformSetting(
+          "referral_commission_rate",
+          { value: 0.1 },
+        );
         const commissionRate = Number(commissionConfig?.value || 0.1);
         const hoa_hong = Math.round(invoice.tong_tien * commissionRate);
 
         if (hoa_hong > 0) {
-          await connection.query("UPDATE nguoi_dung SET so_du = so_du + ? WHERE id = ?", [
-            hoa_hong,
-            invoice.id_nguoi_gioi_thieu,
-          ]);
+          await connection.query(
+            "UPDATE nguoi_dung SET so_du = so_du + ? WHERE id = ?",
+            [hoa_hong, invoice.id_nguoi_gioi_thieu],
+          );
           await connection.query(
             `
               INSERT INTO thong_bao (id_nguoi_nhan, id_nguoi_gui, noi_dung, loai_thong_bao)
@@ -152,6 +174,49 @@ exports.executePayment = async (req, res) => {
       [ma_tra_cuu, invoiceId],
     );
 
+    // Lưu thông tin chi tiết booking với selected services
+    const bookingNote = ghi_chu || "";
+    let detailedNote = bookingNote;
+
+    // Thêm thông tin selected services vào ghi chú
+    if (Array.isArray(selected_services) && selected_services.length > 0) {
+      const serviceNames = selected_services
+        .map((s) => s.ten_dich_vu)
+        .join(", ");
+      detailedNote +=
+        (detailedNote ? " | " : "") + `Gói dịch vụ: ${serviceNames}`;
+    }
+
+    // Thêm thông tin linked services vào ghi chú
+    if (linked_services && typeof linked_services === "object") {
+      const linkedParts = [];
+      for (const [khuId, serviceIds] of Object.entries(linked_services)) {
+        if (Array.isArray(serviceIds) && serviceIds.length > 0) {
+          // Lấy tên khu du lịch
+          const [khuInfo] = await connection.query(
+            "SELECT COALESCE(hs.ten_khu_du_lich, nd.ten) as ten FROM nguoi_dung nd LEFT JOIN ho_so_khu_du_lich hs ON hs.id_nguoi_dung = nd.id WHERE nd.id = ?",
+            [khuId],
+          );
+          const khuName = khuInfo[0]?.ten || `Khu ${khuId}`;
+
+          // Lấy tên các dịch vụ
+          if (serviceIds.length > 0) {
+            const placeholders = serviceIds.map(() => "?").join(", ");
+            const [services] = await connection.query(
+              `SELECT ten_dich_vu FROM dich_vu WHERE id IN (${placeholders})`,
+              serviceIds,
+            );
+            const serviceNames = services.map((s) => s.ten_dich_vu).join(", ");
+            linkedParts.push(`${khuName}: ${serviceNames}`);
+          }
+        }
+      }
+      if (linkedParts.length > 0) {
+        detailedNote +=
+          (detailedNote ? " | " : "") + `Liên kết: ${linkedParts.join("; ")}`;
+      }
+    }
+
     await connection.query(
       `
         INSERT INTO dat_ve (
@@ -166,7 +231,7 @@ exports.executePayment = async (req, res) => {
           ghi_chu,
           trang_thai
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending')
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'confirmed')
       `,
       [
         invoice.id_kdl,
@@ -177,7 +242,7 @@ exports.executePayment = async (req, res) => {
         invoice.phuong_thuc || "standard",
         users[0].ten,
         invoice.tong_tien,
-        ghi_chu || null,
+        detailedNote || null,
       ],
     );
 
@@ -194,9 +259,13 @@ exports.executePayment = async (req, res) => {
     );
 
     const linkedDestinationIds = Array.isArray(linked_destination_ids)
-      ? [...new Set(linked_destination_ids.map((id) => Number(id)).filter(Number.isInteger))].filter(
-          (id) => id !== Number(invoice.id_kdl),
-        )
+      ? [
+          ...new Set(
+            linked_destination_ids
+              .map((id) => Number(id))
+              .filter(Number.isInteger),
+          ),
+        ].filter((id) => id !== Number(invoice.id_kdl))
       : [];
 
     if (linkedDestinationIds.length) {
@@ -251,6 +320,7 @@ exports.executePayment = async (req, res) => {
     res.json({ success: true, ticket: ticketData[0] });
   } catch (err) {
     await connection.rollback();
+    console.error("Execute payment error:", err);
     res.status(400).json({ success: false, message: err.message });
   } finally {
     connection.release();

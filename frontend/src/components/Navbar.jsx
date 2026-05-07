@@ -1,10 +1,9 @@
-import React, { useEffect, useRef, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import React, { useEffect, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Bell,
   Calendar,
   ChevronDown,
-  Clock,
   Home,
   LogOut,
   MessageSquare,
@@ -12,112 +11,115 @@ import {
   Search,
   Settings as SettingsIcon,
   ShieldCheck,
+  Ticket,
   User,
-} from 'lucide-react'
-import api from '../api'
-import { buildUploadUrl } from '../config'
-import { getTrustBadge } from '../utils/trustBadge'
+  Wallet,
+} from "lucide-react";
+import api from "../api";
+import { buildUploadUrl } from "../config";
+import { getTrustBadge } from "../utils/trustBadge";
 
 const Navbar = ({ user }) => {
-  const navigate = useNavigate()
-  const searchRef = useRef(null)
-  const [showDropdown, setShowDropdown] = useState(false)
-  const [showNoti, setShowNoti] = useState(false)
-  const [notifications, setNotifications] = useState([])
-  const [searchTerm, setSearchTerm] = useState('')
-  const [showSearchResults, setShowSearchResults] = useState(false)
-  const [searchLoading, setSearchLoading] = useState(false)
-  const [searchResults, setSearchResults] = useState({ users: [], posts: [] })
+  const navigate = useNavigate();
+  const searchRef = useRef(null);
+  const [showDropdown, setShowDropdown] = useState(false);
+  const [showNoti, setShowNoti] = useState(false);
+  const [notifications, setNotifications] = useState([]);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [showSearchResults, setShowSearchResults] = useState(false);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [searchResults, setSearchResults] = useState({ users: [], posts: [] });
 
   useEffect(() => {
-    if (!user) return
+    if (!user) return;
 
-    let active = true
+    let active = true;
 
     const loadNotifications = async () => {
       try {
-        const res = await api.get('/notifications')
+        const res = await api.get("/notifications");
         if (active && res.data.success) {
-          setNotifications(res.data.data)
+          setNotifications(res.data.data);
         }
       } catch (err) {
-        console.error('Lỗi lấy thông báo:', err)
+        console.error("Lỗi lấy thông báo:", err);
       }
-    }
+    };
 
-    loadNotifications()
+    loadNotifications();
 
     return () => {
-      active = false
-    }
-  }, [user])
+      active = false;
+    };
+  }, [user]);
 
   useEffect(() => {
-    if (!user) return
+    if (!user) return;
 
-    const keyword = searchTerm.trim()
+    const keyword = searchTerm.trim();
     if (!keyword) {
-      setSearchResults({ users: [], posts: [] })
-      setSearchLoading(false)
-      return
+      setSearchResults({ users: [], posts: [] });
+      setSearchLoading(false);
+      return;
     }
 
-    let active = true
-    setSearchLoading(true)
+    let active = true;
+    setSearchLoading(true);
 
     const timer = setTimeout(async () => {
       try {
-        const res = await api.get('/users/search', { params: { q: keyword } })
+        const res = await api.get("/users/search", { params: { q: keyword } });
         if (active && res.data.success) {
-          setSearchResults(res.data.data || { users: [], posts: [] })
+          setSearchResults(res.data.data || { users: [], posts: [] });
         }
       } catch (err) {
         if (active) {
-          console.error('Lỗi tìm kiếm:', err)
-          setSearchResults({ users: [], posts: [] })
+          console.error("Lỗi tìm kiếm:", err);
+          setSearchResults({ users: [], posts: [] });
         }
       } finally {
-        if (active) setSearchLoading(false)
+        if (active) setSearchLoading(false);
       }
-    }, 250)
+    }, 250);
 
     return () => {
-      active = false
-      clearTimeout(timer)
-    }
-  }, [searchTerm, user])
+      active = false;
+      clearTimeout(timer);
+    };
+  }, [searchTerm, user]);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (!searchRef.current?.contains(event.target)) {
-        setShowSearchResults(false)
+        setShowSearchResults(false);
       }
-    }
+    };
 
-    document.addEventListener('mousedown', handleClickOutside)
-    return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [])
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   const handleMarkAllRead = async () => {
     try {
-      await api.put('/notifications/mark-read')
-      const res = await api.get('/notifications')
-      if (res.data.success) setNotifications(res.data.data)
+      await api.put("/notifications/mark-read");
+      const res = await api.get("/notifications");
+      if (res.data.success) setNotifications(res.data.data);
     } catch (err) {
-      console.error(err)
+      console.error(err);
     }
-  }
+  };
 
-  const unreadCount = notifications.filter((n) => !n.da_xem).length
-  const isTourist = user?.vai_tro === 'khach_du_lich'
-  const trustBadge = getTrustBadge(user?.diem_tin_cay)
-  const totalSearchResults = (searchResults.users?.length || 0) + (searchResults.posts?.length || 0)
+  const unreadCount = notifications.filter((n) => !n.da_xem).length;
+  const isTourist = user?.vai_tro === "khach_du_lich";
+  const trustBadge = getTrustBadge(user?.diem_tin_cay);
+  const totalSearchResults =
+    (searchResults.users?.length || 0) + (searchResults.posts?.length || 0);
   const roleLabel =
-    user?.vai_tro === 'admin'
-      ? 'Quản trị hệ thống'
-      : user?.vai_tro === 'khu_du_lich'
-        ? 'Đối tác KDL'
-        : 'Khách du lịch'
+    user?.vai_tro === "admin"
+      ? "Quản trị hệ thống"
+      : user?.vai_tro === "khu_du_lich"
+        ? "Đối tác KDL"
+        : "Khách du lịch";
 
   return (
     <nav className="sticky top-0 z-50 border-b border-gray-100 bg-white px-6 py-2 shadow-sm">
@@ -125,7 +127,7 @@ const Navbar = ({ user }) => {
         <div className="flex flex-1 items-center gap-4">
           <div
             className="group flex shrink-0 cursor-pointer items-center gap-2"
-            onClick={() => navigate('/home')}
+            onClick={() => navigate("/home")}
           >
             <div className="rounded-xl bg-blue-600 p-2 text-white shadow-lg shadow-blue-100 transition-transform group-hover:rotate-12">
               <Navigation size={22} fill="currentColor" />
@@ -135,18 +137,21 @@ const Navbar = ({ user }) => {
             </span>
           </div>
 
-          <div ref={searchRef} className="relative hidden w-full max-w-[360px] md:block">
+          <div
+            ref={searchRef}
+            className="relative hidden w-full max-w-[360px] md:block"
+          >
             <div className="flex items-center rounded-2xl border border-transparent bg-gray-50 px-4 py-2 transition-all focus-within:border-blue-200 focus-within:bg-white">
               <Search size={18} className="text-gray-400" />
               <input
                 type="text"
                 value={searchTerm}
                 onChange={(e) => {
-                  setSearchTerm(e.target.value)
-                  setShowSearchResults(true)
+                  setSearchTerm(e.target.value);
+                  setShowSearchResults(true);
                 }}
                 onFocus={() => setShowSearchResults(true)}
-                placeholder="Tìm người dùng, khu du lịch, bài viết..."
+                placeholder="Tìm người dùng, khu du lịch, bài việt..."
                 className="ml-2 w-full border-none bg-transparent text-sm font-bold text-slate-700 outline-none placeholder:text-gray-400"
               />
             </div>
@@ -172,18 +177,26 @@ const Navbar = ({ user }) => {
                           <button
                             key={`user-${item.id}`}
                             onClick={() => {
-                              navigate(`/profile/${item.id}`)
-                              setShowSearchResults(false)
-                              setSearchTerm('')
+                              navigate(`/profile/${item.id}`);
+                              setShowSearchResults(false);
+                              setSearchTerm("");
                             }}
                             className="flex w-full items-center gap-3 px-5 py-3 text-left transition-all hover:bg-slate-50"
                           >
                             <div className="h-11 w-11 overflow-hidden rounded-xl bg-blue-600 shadow-sm">
                               {item.anh_dai_dien ? (
-                                <img src={buildUploadUrl(item.anh_dai_dien)} className="h-full w-full object-cover" alt="avatar" />
+                                <img
+                                  src={buildUploadUrl(item.anh_dai_dien)}
+                                  className="h-full w-full object-cover"
+                                  alt="avatar"
+                                />
                               ) : (
                                 <div className="flex h-full w-full items-center justify-center font-black text-white">
-                                  {(item.ten_khu_du_lich || item.ten || 'U').charAt(0)}
+                                  {(
+                                    item.ten_khu_du_lich ||
+                                    item.ten ||
+                                    "U"
+                                  ).charAt(0)}
                                 </div>
                               )}
                             </div>
@@ -192,7 +205,9 @@ const Navbar = ({ user }) => {
                                 {item.ten_khu_du_lich || item.ten}
                               </p>
                               <p className="truncate text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                                {item.vai_tro === 'khu_du_lich' ? item.tinh_thanh || 'Khu du lịch' : 'Người dùng'}
+                                {item.vai_tro === "khu_du_lich"
+                                  ? item.tinh_thanh || "Khu du lịch"
+                                  : "Người dùng"}
                               </p>
                             </div>
                           </button>
@@ -203,21 +218,25 @@ const Navbar = ({ user }) => {
                     {searchResults.posts?.length > 0 && (
                       <div>
                         <p className="px-5 pb-2 pt-1 text-[10px] font-black uppercase tracking-widest text-slate-400">
-                          Bài viết
+                          Bài việt
                         </p>
                         {searchResults.posts.map((item) => (
                           <button
                             key={`post-${item.id}`}
                             onClick={() => {
-                              navigate(`/post/${item.id}`)
-                              setShowSearchResults(false)
-                              setSearchTerm('')
+                              navigate(`/post/${item.id}`);
+                              setShowSearchResults(false);
+                              setSearchTerm("");
                             }}
                             className="flex w-full items-start gap-3 px-5 py-3 text-left transition-all hover:bg-slate-50"
                           >
                             <div className="h-11 w-11 overflow-hidden rounded-xl bg-slate-100 shadow-sm">
                               {item.hinh_anh_json?.[0] ? (
-                                <img src={buildUploadUrl(item.hinh_anh_json[0])} className="h-full w-full object-cover" alt="post" />
+                                <img
+                                  src={buildUploadUrl(item.hinh_anh_json[0])}
+                                  className="h-full w-full object-cover"
+                                  alt="post"
+                                />
                               ) : (
                                 <div className="flex h-full w-full items-center justify-center text-slate-400">
                                   <Search size={16} />
@@ -226,10 +245,11 @@ const Navbar = ({ user }) => {
                             </div>
                             <div className="min-w-0 flex-1">
                               <p className="truncate text-sm font-black text-slate-800">
-                                {item.tieu_de || 'Bài viết'}
+                                {item.tieu_de || "Bài việt"}
                               </p>
                               <p className="truncate text-[11px] font-medium text-slate-500">
-                                {item.ten_khu_du_lich || item.ten_nguoi_dang} • {item.danh_muc || 'Tổng hợp'}
+                                {item.ten_khu_du_lich || item.ten_nguoi_dang} •{" "}
+                                {item.danh_muc || "Tổng hợp"}
                               </p>
                               <p className="line-clamp-1 text-[11px] text-slate-400">
                                 {item.noi_dung}
@@ -252,14 +272,14 @@ const Navbar = ({ user }) => {
 
         <div className="flex flex-1 items-center justify-center gap-2 md:gap-8">
           <button
-            onClick={() => navigate('/home')}
+            onClick={() => navigate("/home")}
             className="group relative rounded-2xl p-3 text-gray-500 transition-all hover:bg-blue-50 hover:text-blue-600"
           >
             <Home size={26} />
           </button>
 
           <button
-            onClick={() => navigate('/messages')}
+            onClick={() => navigate("/messages")}
             className="group relative rounded-2xl p-3 text-gray-500 transition-all hover:bg-blue-50 hover:text-blue-600"
           >
             <MessageSquare size={26} />
@@ -269,11 +289,13 @@ const Navbar = ({ user }) => {
           <div className="relative">
             <button
               onClick={() => {
-                setShowNoti(!showNoti)
-                setShowDropdown(false)
+                setShowNoti(!showNoti);
+                setShowDropdown(false);
               }}
               className={`relative rounded-2xl p-3 transition-all ${
-                showNoti ? 'bg-blue-50 text-blue-600' : 'text-gray-500 hover:bg-gray-50'
+                showNoti
+                  ? "bg-blue-50 text-blue-600"
+                  : "text-gray-500 hover:bg-gray-50"
               }`}
             >
               <Bell size={26} />
@@ -286,7 +308,10 @@ const Navbar = ({ user }) => {
 
             {showNoti && (
               <>
-                <div className="fixed inset-0 z-10" onClick={() => setShowNoti(false)} />
+                <div
+                  className="fixed inset-0 z-10"
+                  onClick={() => setShowNoti(false)}
+                />
                 <div className="absolute left-1/2 z-20 mt-4 w-80 -translate-x-1/2 overflow-hidden rounded-[2.5rem] border border-gray-100 bg-white py-4 shadow-2xl md:w-96">
                   <div className="mb-2 flex items-center justify-between border-b border-gray-50 px-6 py-2">
                     <h3 className="text-[11px] font-black uppercase tracking-widest italic text-slate-800">
@@ -306,11 +331,15 @@ const Navbar = ({ user }) => {
                         <div
                           key={noti.id}
                           className={`relative flex cursor-pointer gap-3 px-6 py-4 transition-all hover:bg-slate-50 ${
-                            !noti.da_xem ? 'bg-indigo-50/40' : ''
+                            !noti.da_xem ? "bg-indigo-50/40" : ""
                           }`}
                           onClick={() => {
-                            setShowNoti(false)
-                            navigate(noti.loai_thong_bao === 'ket_ban' ? '/friends' : '/home')
+                            setShowNoti(false);
+                            navigate(
+                              noti.loai_thong_bao === "ket_ban"
+                                ? "/friends"
+                                : "/home",
+                            );
                           }}
                         >
                           <div className="h-10 w-10 shrink-0 overflow-hidden rounded-xl border-2 border-white bg-blue-600 shadow-sm">
@@ -328,14 +357,18 @@ const Navbar = ({ user }) => {
                           </div>
                           <div className="flex-1">
                             <p className="text-[12.5px] leading-snug text-slate-700">
-                              <span className="font-black text-slate-900">{noti.ten_nguoi_gui}</span>{' '}
+                              <span className="font-black text-slate-900">
+                                {noti.ten_nguoi_gui}
+                              </span>{" "}
                               {noti.noi_dung}
                             </p>
                             <p className="mt-1 text-[9px] font-bold uppercase italic tracking-tighter text-slate-400">
                               Vừa xong
                             </p>
                           </div>
-                          {!noti.da_xem && <div className="mt-2 h-2 w-2 shrink-0 rounded-full bg-blue-600" />}
+                          {!noti.da_xem && (
+                            <div className="mt-2 h-2 w-2 shrink-0 rounded-full bg-blue-600" />
+                          )}
                         </div>
                       ))
                     ) : (
@@ -347,10 +380,10 @@ const Navbar = ({ user }) => {
 
                   <button
                     onClick={() => {
-                      navigate('/notifications')
-                      setShowNoti(false)
+                      navigate("/notifications");
+                      setShowNoti(false);
                     }}
-                    className="mt-2 w-full border-t border-gray-50 pt-4 pb-2 text-center text-[10px] font-black uppercase tracking-widest text-slate-400 transition-all hover:text-blue-600"
+                    className="mt-2 w-full border-t border-gray-50 pb-2 pt-4 text-center text-[10px] font-black uppercase tracking-widest text-slate-400 transition-all hover:text-blue-600"
                   >
                     Xem tất cả thông báo
                   </button>
@@ -364,14 +397,14 @@ const Navbar = ({ user }) => {
           <div className="relative">
             <button
               onClick={() => {
-                setShowDropdown(!showDropdown)
-                setShowNoti(false)
+                setShowDropdown(!showDropdown);
+                setShowNoti(false);
               }}
               className="flex items-center gap-3 rounded-2xl border border-transparent bg-gray-50 p-1.5 pl-3 shadow-sm transition-all hover:border-gray-200"
             >
               <div className="hidden text-right sm:block">
                 <p className="text-[11px] font-black leading-none text-slate-800">
-                  {user?.ten?.split(' ').pop() || 'User'}
+                  {user?.ten?.split(" ").pop() || "User"}
                 </p>
                 <p className="mt-1 text-[8px] font-bold uppercase italic tracking-tighter text-blue-500">
                   Trực tuyến
@@ -392,16 +425,21 @@ const Navbar = ({ user }) => {
               </div>
               <ChevronDown
                 size={14}
-                className={`text-gray-400 transition-transform ${showDropdown ? 'rotate-180' : ''}`}
+                className={`text-gray-400 transition-transform ${showDropdown ? "rotate-180" : ""}`}
               />
             </button>
 
             {showDropdown && (
               <>
-                <div className="fixed inset-0 z-10" onClick={() => setShowDropdown(false)} />
+                <div
+                  className="fixed inset-0 z-10"
+                  onClick={() => setShowDropdown(false)}
+                />
                 <div className="absolute right-0 z-20 mt-3 w-60 rounded-[2rem] border border-gray-100 bg-white py-3 shadow-2xl">
                   <div className="border-b border-gray-50 px-6 py-4">
-                    <p className="truncate text-sm font-black text-slate-800">{user?.ten}</p>
+                    <p className="truncate text-sm font-black text-slate-800">
+                      {user?.ten}
+                    </p>
                     <p className="mt-0.5 text-[10px] font-bold uppercase italic tracking-wider text-blue-500">
                       {roleLabel}
                     </p>
@@ -411,16 +449,18 @@ const Navbar = ({ user }) => {
                       >
                         {trustBadge.icon}
                         <span>{trustBadge.label}</span>
-                        <span className="opacity-70">• {user?.diem_tin_cay || 0} điểm</span>
+                        <span className="opacity-70">
+                          • {user?.diem_tin_cay || 0} diem
+                        </span>
                       </div>
                     )}
                   </div>
                   <div className="space-y-1 p-2">
-                    {user?.vai_tro === 'admin' && (
+                    {user?.vai_tro === "admin" && (
                       <button
                         onClick={() => {
-                          navigate('/admin')
-                          setShowDropdown(false)
+                          navigate("/admin");
+                          setShowDropdown(false);
                         }}
                         className="flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-sm font-bold text-slate-600 transition-all hover:bg-slate-100 hover:text-slate-900"
                       >
@@ -429,8 +469,8 @@ const Navbar = ({ user }) => {
                     )}
                     <button
                       onClick={() => {
-                        navigate(`/profile/${user.id}`)
-                        setShowDropdown(false)
+                        navigate(`/profile/${user.id}`);
+                        setShowDropdown(false);
                       }}
                       className="flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-sm font-bold text-slate-600 transition-all hover:bg-blue-50 hover:text-blue-600"
                     >
@@ -438,18 +478,27 @@ const Navbar = ({ user }) => {
                     </button>
                     <button
                       onClick={() => {
-                        navigate('/my-bookings')
-                        setShowDropdown(false)
+                        navigate("/my-bookings");
+                        setShowDropdown(false);
                       }}
                       className="flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-sm font-bold text-slate-600 transition-all hover:bg-blue-50 hover:text-blue-600"
                     >
-                      <Clock size={18} /> Đặt vé của tôi
+                      <Ticket size={18} /> Vé của tôi
                     </button>
-                    {user?.vai_tro === 'khu_du_lich' && (
+                    <button
+                      onClick={() => {
+                        navigate("/payment?action=withdraw");
+                        setShowDropdown(false);
+                      }}
+                      className="flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-sm font-bold text-slate-600 transition-all hover:bg-emerald-50 hover:text-emerald-600"
+                    >
+                      <Wallet size={18} /> Rút tiền
+                    </button>
+                    {user?.vai_tro === "khu_du_lich" && (
                       <button
                         onClick={() => {
-                          navigate('/booking-management')
-                          setShowDropdown(false)
+                          navigate("/booking-management");
+                          setShowDropdown(false);
                         }}
                         className="flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-sm font-bold text-slate-600 transition-all hover:bg-green-50 hover:text-green-600"
                       >
@@ -458,8 +507,8 @@ const Navbar = ({ user }) => {
                     )}
                     <button
                       onClick={() => {
-                        navigate('/settings')
-                        setShowDropdown(false)
+                        navigate("/settings");
+                        setShowDropdown(false);
                       }}
                       className="flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-sm font-bold text-slate-600 transition-all hover:bg-gray-50"
                     >
@@ -468,9 +517,9 @@ const Navbar = ({ user }) => {
                     <div className="mx-4 my-1 h-px bg-gray-50" />
                     <button
                       onClick={() => {
-                        localStorage.clear()
-                        window.dispatchEvent(new Event('auth-change'))
-                        navigate('/login')
+                        localStorage.clear();
+                        window.dispatchEvent(new Event("auth-change"));
+                        navigate("/login");
                       }}
                       className="flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-sm font-bold text-red-500 transition-all hover:bg-red-50"
                     >
@@ -484,7 +533,7 @@ const Navbar = ({ user }) => {
         </div>
       </div>
     </nav>
-  )
-}
+  );
+};
 
-export default Navbar
+export default Navbar;

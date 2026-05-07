@@ -1,5 +1,16 @@
-import React from "react";
-import { MessageCircle, Bookmark, Ticket, MapPin, Star, PlayCircle } from "lucide-react";
+import React, { useState } from "react";
+import {
+  MessageCircle,
+  Bookmark,
+  Ticket,
+  MapPin,
+  Star,
+  PlayCircle,
+  Edit2,
+  Trash2,
+  Loader2,
+  AlertCircle,
+} from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import api from "../api";
@@ -7,7 +18,9 @@ import { buildUploadUrl } from "../config";
 
 const ExplorePostCard = ({ post, currentUser, onRefresh }) => {
   const navigate = useNavigate();
+  const [isDeleting, setIsDeleting] = useState(false);
   const isTourist = currentUser?.vai_tro === "khach_du_lich";
+  const isOwner = Number(currentUser?.id) === Number(post?.id_nguoi_dung);
   const mediaList =
     Array.isArray(post?.media_json) && post.media_json.length
       ? post.media_json
@@ -43,6 +56,29 @@ const ExplorePostCard = ({ post, currentUser, onRefresh }) => {
     }
   };
 
+  const handleEdit = (e) => {
+    e.stopPropagation();
+    navigate(`/post/${post.id}/edit`);
+  };
+
+  const handleDelete = async (e) => {
+    e.stopPropagation();
+    if (!window.confirm("Bạn có chắc muốn xóa bài viết này?")) {
+      return;
+    }
+
+    setIsDeleting(true);
+    try {
+      await api.delete(`/posts/${post.id}`);
+      toast.success("Đã xóa bài viết thành công!");
+      if (onRefresh) onRefresh();
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Không thể xóa bài viết");
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   return (
     <div
       onClick={goToDetail}
@@ -66,7 +102,11 @@ const ExplorePostCard = ({ post, currentUser, onRefresh }) => {
           </>
         ) : (
           <img
-            src={heroMedia?.url ? buildUploadUrl(heroMedia.url) : "https://via.placeholder.com/400x300"}
+            src={
+              heroMedia?.url
+                ? buildUploadUrl(heroMedia.url)
+                : "https://via.placeholder.com/400x300"
+            }
             className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
             alt={post.tieu_de}
           />
@@ -77,7 +117,8 @@ const ExplorePostCard = ({ post, currentUser, onRefresh }) => {
           </span>
           <span className="bg-slate-900/85 text-white px-3 py-1 rounded-xl font-black text-[10px] shadow-sm flex items-center gap-1.5">
             <Star size={12} fill="currentColor" />
-            {Number(post.diem_danh_gia || 0).toFixed(1)} • {post.tong_danh_gia || 0} đánh giá
+            {Number(post.diem_danh_gia || 0).toFixed(1)} •{" "}
+            {post.tong_danh_gia || 0} đánh giá
           </span>
           {heroMedia?.type === "video" && (
             <span className="bg-rose-500/90 text-white px-3 py-1 rounded-xl font-black text-[10px] shadow-sm">
@@ -100,16 +141,45 @@ const ExplorePostCard = ({ post, currentUser, onRefresh }) => {
               </span>
             </div>
           </div>
-          <button
-            onClick={handleToggleSave}
-            className={`p-2.5 rounded-2xl transition-all ${
-              post.da_luu
-                ? "bg-amber-50 text-amber-500"
-                : "bg-slate-50 text-slate-300 hover:text-slate-500"
-            }`}
-          >
-            <Bookmark size={20} fill={post.da_luu ? "currentColor" : "none"} />
-          </button>
+          <div className="flex items-center gap-2">
+            {isOwner && (
+              <>
+                <button
+                  onClick={handleEdit}
+                  className="p-2.5 rounded-2xl bg-blue-50 text-blue-500 hover:bg-blue-100 transition-all"
+                  title="Chỉnh sửa bài viết"
+                >
+                  <Edit2 size={16} />
+                </button>
+                <button
+                  onClick={handleDelete}
+                  disabled={isDeleting}
+                  className="p-2.5 rounded-2xl bg-red-50 text-red-500 hover:bg-red-100 transition-all disabled:opacity-50"
+                  title="Xóa bài viết"
+                >
+                  {isDeleting ? (
+                    <Loader2 size={16} className="animate-spin" />
+                  ) : (
+                    <Trash2 size={16} />
+                  )}
+                </button>
+              </>
+            )}
+            <button
+              onClick={handleToggleSave}
+              className={`p-2.5 rounded-2xl transition-all ${
+                post.da_luu
+                  ? "bg-amber-50 text-amber-500"
+                  : "bg-slate-50 text-slate-300 hover:text-slate-500"
+              }`}
+              title={post.da_luu ? "Bỏ lưu bài viết" : "Lưu bài viết"}
+            >
+              <Bookmark
+                size={20}
+                fill={post.da_luu ? "currentColor" : "none"}
+              />
+            </button>
+          </div>
         </div>
 
         <p className="text-sm text-slate-500 line-clamp-3 mb-4 flex-1 leading-relaxed">
