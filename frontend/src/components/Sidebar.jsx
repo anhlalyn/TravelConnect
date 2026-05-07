@@ -55,7 +55,7 @@ const Sidebar = ({ user }) => {
     },
     {
       icon: <Wallet size={20} />,
-      label: "Ví & Vé Số",
+      label: "Ví & Thanh Toán",
       path: "/payment",
       color: "text-emerald-600",
       activeBg: "bg-emerald-50",
