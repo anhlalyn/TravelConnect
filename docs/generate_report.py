@@ -385,6 +385,41 @@ def add_data_dictionary_table(title, columns, data):
     table = doc.add_table(rows=len(data) + 1, cols=len(columns))
     table.alignment = WD_TABLE_ALIGNMENT.CENTER
     
+    # Determine column widths dynamically based on headers and column count
+    num_cols = len(columns)
+    col_widths = []
+    first_col = columns[0].lower()
+    
+    if num_cols == 3:
+        # Abbreviations table
+        col_widths = [Cm(1.5), Cm(3.5), Cm(10.5)]
+    elif num_cols == 4:
+        if "nhóm" in first_col or "nhom" in first_col:
+            # Function analysis table
+            col_widths = [Cm(3.0), Cm(3.5), Cm(6.0), Cm(3.0)]
+        else:
+            # Test scenarios table
+            col_widths = [Cm(3.5), Cm(5.0), Cm(5.0), Cm(2.0)]
+    elif num_cols == 5:
+        if "api" in first_col:
+            # API Test results table
+            col_widths = [Cm(4.0), Cm(1.5), Cm(4.0), Cm(4.5), Cm(1.5)]
+        else:
+            # Data dictionary table
+            col_widths = [Cm(3.0), Cm(2.5), Cm(1.5), Cm(1.5), Cm(7.0)]
+    else:
+        # Default fallback: distribute evenly
+        total_width = 15.5
+        col_widths = [Cm(total_width / num_cols)] * num_cols
+
+    # Apply widths to every cell in the table
+    for row in table.rows:
+        for i, cell in enumerate(row.cells):
+            if i < len(col_widths):
+                cell.width = col_widths[i]
+                
+    table.allow_autofit = False
+    
     # Format header
     hdr_cells = table.rows[0].cells
     for i, col in enumerate(columns):
