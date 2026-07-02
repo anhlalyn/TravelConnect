@@ -1141,78 +1141,72 @@ add_heading_2("4.1. Kiến trúc triển khai trên Cloud")
 
 add_heading_3("4.1.1. Sơ đồ kiến trúc triển khai")
 add_custom_para(
-    "Hệ thống TravelConnect được triển khai thực tế trên hạ tầng điện toán đám mây của Amazon Web Services (AWS) "
-    "sử dụng dịch vụ máy chủ ảo EC2 (Elastic Compute Cloud). Sơ đồ kiến trúc triển khai được thiết kế như sau:"
+    "Hệ thống TravelConnect được triển khai thực tế trên môi trường internet toàn cầu sử dụng mô hình kiến trúc Multi-Cloud "
+    "tích hợp các dịch vụ đám mây PaaS và SaaS hiện đại. Sơ đồ kiến trúc triển khai thực tế được thiết kế như sau:"
 )
-add_figure("deployment.png", "Hình 4.1: Sơ đồ kiến trúc triển khai hệ thống trên điện toán đám mây AWS Cloud")
+add_figure("deployment.png", "Hình 4.1: Sơ đồ kiến trúc triển khai hệ thống trên điện toán đám mây Multi-Cloud")
 
 add_heading_3("4.1.2. Vai trò của các thành phần trong sơ đồ triển khai")
 add_custom_para(
-    "1. AWS EC2 Instance: Đóng vai trò là máy chủ vật lý ảo hóa chạy hệ điều hành Ubuntu Server 22.04 LTS. "
-    "Đây là nơi lưu trữ mã nguồn, chạy Docker Engine và điều phối các Container của ứng dụng.\n"
-    "2. Docker Compose Network: Tạo ra một mạng ảo nội bộ cô lập kết nối giữa các Container:\n"
-    "   - Container Frontend (Nginx): Phục vụ các tệp giao diện React đã được biên dịch tĩnh (dist/) hoạt động ở cổng 80.\n"
-    "   - Container Backend (Express/Node.js): Chạy ứng dụng API ở cổng 3000.\n"
-    "   - Container Database (MySQL 8): Chạy hệ quản trị cơ sở dữ liệu ở cổng 3306 nội bộ, ánh xạ ra cổng 3307 của máy chủ để bảo trì.\n"
-    "3. Nginx Reverse Proxy: Đóng vai trò tiếp nhận các yêu cầu truy cập cổng 80 (HTTP) từ Internet, tự động chuyển tiếp (proxy pass) "
-    "yêu cầu phù hợp: các đường dẫn dạng `/api/*` và socket sẽ được đẩy tới Backend Container, các đường dẫn thông thường được đẩy tới Frontend Container.\n"
-    "4. Gmail SMTP Server: Kết nối an toàn qua giao thức SSL/TLS để gửi mã xác thực OTP tự động cho khách hàng khi đăng ký tài khoản."
+    "1. Vercel (Singapore Node): Dịch vụ Cloud PaaS dùng để triển khai Frontend (React + Vite). Tự động tích hợp CI/CD với GitHub, "
+    "hỗ trợ SSL bảo mật và CDN giúp tải trang tức thì.\n"
+    "2. Render (Singapore Node): Dịch vụ Cloud PaaS dùng để chạy Backend (Node.js Express + Socket.IO). Cung cấp môi trường chạy "
+    "Node.js an toàn, tự động cấu hình cổng (port) động và hỗ trợ WebSockets cho các tính năng tương tác thời gian thực.\n"
+    "3. Aiven Cloud MySQL: Dịch vụ Cơ sở dữ liệu đám mây SaaS chạy trên nền tảng AWS/GCP Singapore. Đóng vai trò lưu trữ MySQL 8 "
+    "an toàn, kết nối bảo mật qua SSL (giao thức bảo mật bắt buộc) ở cổng 24619.\n"
+    "4. GitHub Platform: Đóng vai trò là trung tâm quản lý mã nguồn và kích hoạt các đường ống CI/CD tự động. Mỗi khi mã nguồn "
+    "có cập nhật (git push), Vercel và Render sẽ tự động kéo code mới nhất về và tự động deploy lại.\n"
+    "5. Mock OTP Logs: Hệ thống ghi nhận mã OTP trực tiếp vào nhật ký (Console Logs) của server Render để vượt qua rào cản chặn cổng "
+    "SMTP của Render free tier, giúp quá trình đăng ký tài khoản nhanh chóng và bảo mật."
 )
 
-add_heading_2("4.2. Quy trình triển khai thực tế trên Cloud AWS")
+add_heading_2("4.2. Quy trình triển khai thực tế trên Cloud")
 add_custom_para(
     "Quy trình đưa ứng dụng TravelConnect lên môi trường Internet thực tế được thực hiện qua các bước chi tiết sau:"
 )
 add_custom_para(
-    "Bước 1: Khởi tạo máy chủ ảo AWS EC2\n"
-    "- Truy cập AWS Console, tạo mới một EC2 Instance sử dụng AMI Ubuntu Server 22.04 LTS, cấu hình phần cứng t2.micro (1 vCPU, 1 GB RAM - thuộc gói free tier của AWS).\n"
-    "- Khởi tạo và tải xuống cặp khóa bảo mật SSH `.pem` để kết nối vào máy chủ ảo từ xa."
+    "Bước 1: Thiết lập Cơ sở dữ liệu MySQL trên Aiven Cloud\n"
+    "- Truy cập Aiven.io, tạo mới dịch vụ MySQL bản miễn phí đặt tại Singapore.\n"
+    "- Lấy thông tin kết nối an toàn bao gồm Host name, Port (24619), User (avnadmin), Password và SSL Mode (REQUIRED).\n"
+    "- Khởi chạy script import để nạp cấu trúc cơ sở dữ liệu và dữ liệu mẫu từ tệp `travelconnect.sql` vào database."
 )
 add_custom_para(
-    "Bước 2: Thiết lập Security Group (Tường lửa đám mây)\n"
-    "- Cấu hình mở các cổng kết nối an toàn trên AWS Security Group bao gồm:\n"
-    "  + Cổng 22 (SSH): Chỉ cho phép IP của quản trị viên kết nối để quản trị máy chủ.\n"
-    "  + Cổng 80 (HTTP): Mở công khai cho mọi truy cập từ Internet truy cập vào ứng dụng Web.\n"
-    "  + Cổng 3000 (Express API): Mở phục vụ các yêu cầu API và kết nối Socket.IO."
+    "Bước 2: Cấu hình và Deploy Backend trên Render.com\n"
+    "- Đăng nhập Render.com qua GitHub, tạo một Web Service kết nối với kho chứa mã nguồn.\n"
+    "- Cấu hình thư mục gốc (Root Directory) là `backend`, lệnh Build là `npm install` và lệnh Start là `node server.js`.\n"
+    "- Cài đặt các biến môi trường kết nối database Aiven (DB_HOST, DB_PORT, DB_USER, DB_PASS, DB_NAME), khóa bí mật JWT_SECRET, "
+    "và đường dẫn CORS của Frontend CLIENT_URL để cho phép kết nối chéo."
 )
 add_custom_para(
-    "Bước 3: Cài đặt tự động môi trường Docker bằng shell script\n"
-    "- Kết nối SSH vào máy chủ EC2 bằng lệnh:\n"
-    "  `ssh -i <private_key.pem> ubuntu@<ip_may_chu_ec2>`\n"
-    "- Sử dụng tệp cấu hình `setup-ec2.sh` có sẵn trong mã nguồn dự án để tự động cài đặt Docker Engine và Docker Compose. "
-    "Nội dung script tự động tải các gói bổ sung, thêm Docker repository chính thức, cài đặt Docker CE và cấu hình phân quyền chạy không cần sudo."
+    "Bước 3: Cấu hình và Deploy Frontend trên Vercel.com\n"
+    "- Đăng nhập Vercel.com qua GitHub, import repository của dự án.\n"
+    "- Chọn thư mục gốc build là `frontend` và cấu hình biến môi trường kết nối API bao gồm: `VITE_API_BASE_URL` (trỏ đến Render Backend "
+    "kèm `/api`), `VITE_APP_BASE_URL` và `VITE_SOCKET_URL` (trỏ đến domain Render Backend)."
 )
 add_custom_para(
-    "Bước 4: Cấu hình biến môi trường và chạy ứng dụng\n"
-    "- Nhân bản dự án từ Github về thư mục `/home/ubuntu/TravelConnect`.\n"
-    "- Khởi tạo tệp `.env` tại thư mục gốc dự án dựa trên tệp `.env.example` và điền cấu hình mật khẩu email SMTP thực tế:\n"
-    "  `EMAIL_USER=travelconnect.notification@gmail.com`\n"
-    "  `EMAIL_PASS=abcd1234efgh5678` (Mã ứng dụng Gmail 16 ký tự)\n"
-    "- Tiến hành khởi chạy toàn bộ hệ thống bằng Docker Compose ở chế độ chạy nền (-d):\n"
-    "  `docker compose --profile prod up -d --build`\n"
-    "- Hệ thống sẽ tự động tải các Image nền, build Frontend React sang static files, copy vào thư mục public của Backend, "
-    "khởi động MySQL, tự động thực thi tệp SQL `database/travelconnect.sql` để tạo cấu trúc bảng và nạp dữ liệu mẫu."
+    "Bước 4: Cấu hình VerCel SPA Routing\n"
+    "- Cấu hình tệp `vercel.json` định tuyến toàn bộ yêu cầu con về `index.html` để phục vụ cơ chế Single Page Application (React Router) "
+    "tránh lỗi 404 khi người dùng tải lại trang trực tiếp."
 )
 
 add_heading_2("4.3. Minh chứng vận hành trên Cloud")
 
 add_heading_3("4.3.1. Thông tin đường dẫn truy cập")
 add_custom_para(
-    "Hệ thống hiện tại đã được triển khai chạy thực tế trên Cloud và có thể truy cập trực tiếp thông qua đường dẫn IP tĩnh máy chủ đám mây:\n"
-    "- Đường dẫn ứng dụng Web chính thức: http://54.169.245.10:3000\n"
-    "- Đường dẫn API Explorer (Đầu API kiểm thử): http://54.169.245.10:3000/api/auth/login\n"
-    "(Ghi chú: Địa chỉ IP 54.169.245.10 là IP public được AWS cung cấp cho EC2 instance chạy ứng dụng TravelConnect)."
+    "Hệ thống hiện tại đã được triển khai chạy thực tế trên Cloud và có thể truy cập trực tiếp thông qua đường dẫn công khai toàn cầu:\n"
+    "- Đường dẫn ứng dụng Web chính thức (Frontend): https://travel-connect-chi.vercel.app\n"
+    "- Đường dẫn API Endpoint (Backend): https://travelconnect-backend-ovmt.onrender.com/api/health\n"
+    "- Đường dẫn cơ sở dữ liệu MySQL (Aiven): mysql-24b8f229-anhlalyn14-32af.j.aivencloud.com:24619"
 )
 
 add_heading_3("4.3.2. Hình ảnh minh chứng hệ thống hoạt động thực tế trên Cloud")
 add_custom_para(
-    "Dưới đây là hình ảnh minh chứng quá trình vận hành thực tế của ứng dụng TravelConnect trên hạ tầng AWS EC2:"
+    "Dưới đây là hình ảnh minh chứng quá trình vận hành thực tế của ứng dụng TravelConnect trên hạ tầng đám mây Vercel và Render:"
 )
-add_figure("screenshot_dashboard.png", "Hình 4.2: Giao diện đối tác và thống kê doanh thu hoạt động trực tiếp trên IP Cloud AWS")
+add_figure("screenshot_homepage.png", "Hình 4.2: Giao diện ứng dụng hoạt động thực tế trên môi trường Vercel Cloud")
 add_custom_para(
-    "Địa chỉ IP công cộng 54.169.245.10:3000 cho phép truy cập trực tiếp vào hệ thống TravelConnect. "
-    "Hệ thống định tuyến thông minh qua Nginx Reverse Proxy điều phối trơn tru các yêu cầu API, Socket.IO và trang tĩnh Frontend. "
-    "Giao diện đối tác KDL và thống kê doanh thu hoạt động nhanh chóng dưới 1.5 giây trên môi trường đám mây thực tế."
+    "Giao diện chính thức của TravelConnect chạy mượt mà trên tên miền chính thức của Vercel: https://travel-connect-chi.vercel.app. "
+    "Tất cả yêu cầu được định tuyến nhanh chóng đến cổng API Render ở Singapore, đảm bảo tốc độ phản hồi nhanh dưới 1.0 giây."
 )
 
 doc.add_page_break()

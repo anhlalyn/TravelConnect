@@ -577,3 +577,41 @@ flowchart TD
 - `Đối tác khu du lịch`: quản lý hồ sơ khu du lịch, dịch vụ, booking, check-in QR, xem thống kê và đánh giá.
 - `Quản trị viên`: giám sát hệ thống, quản lý người dùng, quản lý trạng thái hồ sơ KDL, quản lý danh mục và cấu hình nền tảng.
 - `Kho dữ liệu cốt lõi`: `nguoi_dung`, `ho_so_khu_du_lich`, `bai_viet`, `dich_vu`, `dat_ve`, `thanh_toan`, `thong_bao`.
+
+## 7. Sơ đồ kiến trúc triển khai hệ thống (Multi-Cloud)
+
+Sơ đồ mô tả mô hình triển khai thực tế trên môi trường Cloud (Vercel, Render, Aiven) của hệ thống `TravelConnect`:
+
+```mermaid
+graph TD
+    Client["Client (Trình duyệt Web)"]
+    
+    subgraph GitHub_CI_CD ["GitHub (CI/CD)"]
+        GitHub["Repository: TravelConnect"]
+    end
+
+    subgraph Vercel_Cloud ["Vercel (PaaS - Singapore)"]
+        VercelApp["React + Vite Frontend"]
+    end
+
+    subgraph Render_Cloud ["Render (PaaS - Singapore)"]
+        RenderBackend["Node.js + Express API"]
+        RenderSocket["Socket.IO Realtime"]
+    end
+
+    subgraph Aiven_Cloud ["Aiven Cloud (MySQL SaaS)"]
+        AivenDB[("MySQL 8 Database")]
+    end
+
+    Client -->|1. HTTPS: Tải giao diện| VercelApp
+    Client -->|2. HTTPS API / JSON| RenderBackend
+    Client -->|3. WSS: WebSockets| RenderSocket
+    
+    GitHub -->|CI/CD Auto Trigger| VercelApp
+    GitHub -->|CI/CD Auto Trigger| RenderBackend
+
+    RenderBackend -->|4. TCP/SSL Port 24619| AivenDB
+    RenderSocket -->|4. TCP/SSL Port 24619| AivenDB
+    
+    RenderBackend -.->|5. In OTP ra Console| Logs["Render Terminal Logs"]
+```
