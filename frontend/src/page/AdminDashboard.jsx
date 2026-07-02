@@ -7,6 +7,8 @@ import Sidebar from '../components/Sidebar'
 const tabs = [
   { id: 'overview', label: 'Tổng quan' },
   { id: 'users', label: 'Người dùng' },
+  { id: 'posts', label: 'Bài viết' },
+  { id: 'reports', label: 'Báo cáo' },
   { id: 'businesses', label: 'Duyệt KDL' },
   { id: 'bookings', label: 'Booking' },
   { id: 'payments', label: 'Thanh toán' },
@@ -20,11 +22,11 @@ const formatDateTime = (value) => {
   return new Date(value).toLocaleString('vi-VN')
 }
 
-const StatCard = ({ label, value, hint, colorClass }) => (
-  <div className={`rounded-[1.8rem] p-5 ${colorClass}`}>
-    <p className="text-[11px] font-black uppercase tracking-widest">{label}</p>
-    <p className="text-3xl font-black mt-4">{value}</p>
-    {hint ? <p className="text-xs font-bold mt-2 opacity-80">{hint}</p> : null}
+const StatCard = ({ label, value, hint, colorClass, spanClass = '' }) => (
+  <div className={`flex min-h-[112px] flex-col justify-between rounded-[1.25rem] p-3 sm:min-h-[132px] sm:rounded-[1.8rem] sm:p-5 ${colorClass} ${spanClass}`}>
+    <p className="text-[9px] font-black uppercase tracking-widest sm:text-[11px]">{label}</p>
+    <p className="mt-2 break-words text-xl font-black leading-tight sm:mt-4 sm:text-3xl">{value}</p>
+    {hint ? <p className="mt-2 line-clamp-2 text-[10px] font-bold leading-snug opacity-80 sm:text-xs">{hint}</p> : null}
   </div>
 )
 
@@ -56,25 +58,135 @@ const BusinessStatusBadge = ({ value }) => {
   )
 }
 
+const reportStatusMeta = {
+  pending: { label: 'Chờ xử lý', color: '#f97316', className: 'bg-orange-50 text-orange-700' },
+  reviewed: { label: 'Đã xử lý', color: '#10b981', className: 'bg-emerald-50 text-emerald-700' },
+  dismissed: { label: 'Bỏ qua', color: '#64748b', className: 'bg-slate-100 text-slate-600' },
+}
+
+const ReportStatusBadge = ({ value }) => {
+  const meta = reportStatusMeta[value] || {
+    label: value || '--',
+    className: 'bg-slate-100 text-slate-600',
+  }
+
+  return (
+    <span className={`inline-flex rounded-full px-3 py-1 text-[10px] font-black uppercase tracking-widest ${meta.className}`}>
+      {meta.label}
+    </span>
+  )
+}
+
+const ReportDonutChart = ({ items, total }) => {
+  const segments = items
+    .filter((item) => item.value > 0)
+    .reduce((acc, item) => {
+      const start = acc.cursor
+      const end = start + (item.value / Math.max(total, 1)) * 100
+      return {
+        cursor: end,
+        values: [...acc.values, `${item.color} ${start}% ${end}%`],
+      }
+    }, { cursor: 0, values: [] }).values
+
+  return (
+    <div className="grid gap-4 rounded-[1.5rem] border border-slate-100 bg-white p-4 shadow-sm sm:rounded-[1.75rem] sm:p-5 md:grid-cols-[180px_1fr]">
+      <div className="relative mx-auto flex h-32 w-32 items-center justify-center rounded-full sm:h-40 sm:w-40"
+        style={{ background: segments.length ? `conic-gradient(${segments.join(', ')})` : '#e2e8f0' }}
+      >
+        <div className="flex h-20 w-20 flex-col items-center justify-center rounded-full bg-white shadow-inner sm:h-24 sm:w-24">
+          <span className="text-2xl font-black text-slate-900 sm:text-3xl">{total}</span>
+          <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">báo cáo</span>
+        </div>
+      </div>
+      <div className="flex flex-col justify-center gap-3">
+        {items.map((item) => (
+          <div key={item.id} className="flex items-center justify-between gap-3 rounded-2xl bg-slate-50 px-4 py-3">
+            <div className="flex items-center gap-3">
+              <span className="h-3 w-3 rounded-full" style={{ backgroundColor: item.color }} />
+              <span className="text-sm font-black text-slate-700">{item.label}</span>
+            </div>
+            <span className="text-sm font-black text-slate-900">{item.value}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+const ReportReasonBars = ({ items, total }) => (
+  <div className="rounded-[1.5rem] border border-slate-100 bg-white p-4 shadow-sm sm:rounded-[1.75rem] sm:p-5">
+    <div className="mb-5 flex items-center justify-between gap-3">
+      <h3 className="text-lg font-black text-slate-900">Lý do bị báo cáo</h3>
+      <span className="rounded-full bg-slate-100 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-slate-500">
+        Top {items.length}
+      </span>
+    </div>
+    <div className="space-y-4">
+      {items.length ? (
+        items.map((item) => {
+          const percent = Math.round((item.value / Math.max(total, 1)) * 100)
+          return (
+            <div key={item.label}>
+              <div className="mb-2 flex items-center justify-between gap-3 text-xs font-black text-slate-600">
+                <span className="line-clamp-1">{item.label}</span>
+                <span>{item.value} lượt</span>
+              </div>
+              <div className="h-3 overflow-hidden rounded-full bg-slate-100">
+                <div
+                  className="h-full rounded-full bg-blue-600"
+                  style={{ width: `${Math.max(percent, 6)}%` }}
+                />
+              </div>
+            </div>
+          )
+        })
+      ) : (
+        <div className="rounded-2xl bg-slate-50 p-6 text-center text-xs font-black uppercase tracking-widest text-slate-400">
+          Chưa có dữ liệu báo cáo
+        </div>
+      )}
+    </div>
+  </div>
+)
+
 const AdminDashboard = ({ user }) => {
   const [tab, setTab] = useState('overview')
   const [loading, setLoading] = useState(true)
   const [overview, setOverview] = useState(null)
   const [users, setUsers] = useState([])
+  const [posts, setPosts] = useState([])
+  const [reports, setReports] = useState([])
   const [businesses, setBusinesses] = useState([])
   const [bookings, setBookings] = useState([])
   const [payments, setPayments] = useState([])
-  const [platformSettings, setPlatformSettings] = useState({ referral_commission_rate: 0.1 })
+  const [platformSettings, setPlatformSettings] = useState({
+    referral_commission_rate: 0.1,
+    site_branding: { app_name: 'TravelConnect', logo_url: '' },
+    support_content: {
+      title: 'Can ho tro?',
+      message: 'Lien he tong dai TravelConnect 24/7',
+    },
+  })
   const [categories, setCategories] = useState([])
   const [categoryForm, setCategoryForm] = useState({ ten: '', thu_tu: 0, dang_hoat_dong: true })
   const [actionLoading, setActionLoading] = useState('')
+  const [filters, setFilters] = useState({
+    userRole: 'all',
+    postRole: 'all',
+    reportStatus: 'all',
+    bookingStatus: 'all',
+    paymentStatus: 'all',
+  })
 
   const loadData = async () => {
     try {
       setLoading(true)
-      const [overviewRes, usersRes, businessesRes, bookingsRes, paymentsRes, settingsRes, categoriesRes] = await Promise.all([
+      const [overviewRes, usersRes, postsRes, reportsRes, businessesRes, bookingsRes, paymentsRes, settingsRes, categoriesRes] = await Promise.all([
         api.get('/admin/overview'),
         api.get('/admin/users'),
+        api.get('/admin/posts'),
+        api.get('/admin/post-reports'),
         api.get('/admin/businesses'),
         api.get('/admin/bookings'),
         api.get('/admin/payments'),
@@ -84,6 +196,8 @@ const AdminDashboard = ({ user }) => {
 
       setOverview(overviewRes.data.data)
       setUsers(usersRes.data.data || [])
+      setPosts(postsRes.data.data || [])
+      setReports(reportsRes.data.data || [])
       setBusinesses(businessesRes.data.data || [])
       setBookings(bookingsRes.data.data || [])
       setPayments(paymentsRes.data.data || [])
@@ -144,13 +258,115 @@ const AdminDashboard = ({ user }) => {
     }
   }
 
+  const handleDeletePost = async (post) => {
+    if (!window.confirm(`Xóa bài viết "${post.tieu_de || 'Không tiêu đề'}"?`)) return
+
+    setActionLoading(`post-delete-${post.id}`)
+    try {
+      await api.delete(`/admin/posts/${post.id}`)
+      toast.success('Đã xóa bài viết.')
+      await loadData()
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Không thể xóa bài viết.')
+    } finally {
+      setActionLoading('')
+    }
+  }
+
+  const handleReportStatus = async (report, nextStatus) => {
+    const note =
+      nextStatus === 'dismissed'
+        ? window.prompt('Ghi chú bỏ qua báo cáo:', 'Không phát hiện vi phạm.') || ''
+        : window.prompt('Ghi chú xử lý báo cáo:', 'Đã kiểm tra nội dung.') || ''
+
+    setActionLoading(`report-${report.id}-${nextStatus}`)
+    try {
+      await api.put(`/admin/post-reports/${report.id}`, {
+        trang_thai: nextStatus,
+        ghi_chu_admin: note,
+      })
+      toast.success('Đã cập nhật báo cáo.')
+      await loadData()
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Không thể cập nhật báo cáo.')
+    } finally {
+      setActionLoading('')
+    }
+  }
+
+  const filteredUsers = useMemo(
+    () =>
+      filters.userRole === 'all'
+        ? users
+        : users.filter((item) => item.vai_tro === filters.userRole),
+    [filters.userRole, users],
+  )
+
+  const filteredPosts = useMemo(
+    () =>
+      filters.postRole === 'all'
+        ? posts
+        : posts.filter((item) => item.author_role === filters.postRole),
+    [filters.postRole, posts],
+  )
+
+  const filteredReports = useMemo(
+    () =>
+      filters.reportStatus === 'all'
+        ? reports
+        : reports.filter((item) => item.trang_thai === filters.reportStatus),
+    [filters.reportStatus, reports],
+  )
+
+  const reportStatusChart = useMemo(
+    () =>
+      Object.entries(reportStatusMeta).map(([id, meta]) => ({
+        id,
+        label: meta.label,
+        color: meta.color,
+        value: reports.filter((item) => item.trang_thai === id).length,
+      })),
+    [reports],
+  )
+
+  const reportReasonChart = useMemo(() => {
+    const reasonCounts = filteredReports.reduce((acc, item) => {
+      const reason = item.ly_do?.trim() || 'Không ghi lý do'
+      acc[reason] = (acc[reason] || 0) + 1
+      return acc
+    }, {})
+
+    return Object.entries(reasonCounts)
+      .map(([label, value]) => ({ label, value }))
+      .sort((a, b) => b.value - a.value)
+      .slice(0, 5)
+  }, [filteredReports])
+
+  const filteredBookings = useMemo(
+    () =>
+      filters.bookingStatus === 'all'
+        ? bookings
+        : bookings.filter((item) => item.trang_thai === filters.bookingStatus),
+    [bookings, filters.bookingStatus],
+  )
+
+  const filteredPayments = useMemo(
+    () =>
+      filters.paymentStatus === 'all'
+        ? payments
+        : payments.filter((item) => item.trang_thai === filters.paymentStatus),
+    [filters.paymentStatus, payments],
+  )
+
   const handlePlatformSettingsSave = async () => {
     setActionLoading('platform-settings')
     try {
       await api.put('/admin/platform-settings', {
         referral_commission_rate: Number(platformSettings.referral_commission_rate || 0),
+        site_branding: platformSettings.site_branding,
+        support_content: platformSettings.support_content,
       })
-      toast.success('Đã cập nhật tỷ lệ hoa hồng.')
+      toast.success('Đã cập nhật cấu hình nền tảng.')
       await loadData()
     } catch (err) {
       toast.error(err.response?.data?.message || 'Không thể cập nhật cấu hình nền tảng.')
@@ -245,10 +461,23 @@ const AdminDashboard = ({ user }) => {
         colorClass: 'bg-cyan-50 text-cyan-700',
       },
       {
+        label: 'Bài viết',
+        value: overview.posts.total,
+        hint: `${overview.posts.newIn7Days} bài mới trong 7 ngày`,
+        colorClass: 'bg-indigo-50 text-indigo-700',
+      },
+      {
+        label: 'Báo cáo chờ xử lý',
+        value: overview.postReports?.pending || 0,
+        hint: `${overview.postReports?.total || 0} báo cáo toàn hệ thống`,
+        colorClass: 'bg-orange-50 text-orange-700',
+      },
+      {
         label: 'Doanh thu',
         value: formatCurrency(overview.payments.revenue),
         hint: `${overview.payments.completed} giao dịch hoàn tất`,
         colorClass: 'bg-emerald-50 text-emerald-700',
+        spanClass: 'col-span-2 sm:col-span-1',
       },
     ]
   }, [overview])
@@ -270,37 +499,42 @@ const AdminDashboard = ({ user }) => {
     <div className="min-h-screen bg-[#F3F4F6]">
       <Navbar user={user} />
 
-      <div className="max-w-7xl mx-auto grid grid-cols-12 gap-6 pt-6 px-4 pb-10">
-        <div className="hidden lg:block col-span-3">
-          <Sidebar user={user} />
+      <div className="mx-auto grid max-w-[1500px] grid-cols-12 gap-3 px-3 pb-10 pt-3 sm:px-4 md:gap-6 md:pt-6">
+        <div className="hidden lg:col-span-3 lg:block xl:col-span-2">
+          <Sidebar
+            user={user}
+            adminTabs={tabs}
+            activeAdminTab={tab}
+            onAdminTabChange={setTab}
+          />
         </div>
 
-        <div className="col-span-12 lg:col-span-9 space-y-6">
-          <div className="bg-white rounded-[2.5rem] p-8 shadow-sm border border-gray-100">
-            <p className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-400 mb-3">
+        <div className="col-span-12 space-y-3 md:space-y-6 lg:col-span-9 xl:col-span-10">
+          <div className="rounded-[1.5rem] border border-gray-100 bg-white p-5 shadow-sm sm:rounded-[2.5rem] sm:p-8">
+            <p className="mb-2 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 sm:mb-3 sm:text-[11px]">
               Trung tâm quản trị
             </p>
-            <h1 className="text-3xl font-black text-slate-900 mb-2">
+            <h1 className="mb-2 text-xl font-black leading-snug text-slate-900 sm:text-3xl">
               Điều hành nền tảng TravelConnect
             </h1>
-            <p className="text-sm text-slate-500">
+            <p className="text-xs font-semibold leading-relaxed text-slate-500 sm:text-sm">
               Theo dõi hệ thống, duyệt đối tác, quản lý người dùng và kiểm soát booking, thanh toán trên cùng một màn hình.
             </p>
           </div>
 
-          <div className="grid md:grid-cols-2 xl:grid-cols-5 gap-4">
+          <div className="grid grid-cols-2 gap-2 sm:gap-3 md:gap-4 xl:grid-cols-5">
             {statCards.map((card) => (
               <StatCard key={card.label} {...card} />
             ))}
           </div>
 
-          <div className="bg-white rounded-[2.5rem] p-4 shadow-sm border border-gray-100 flex flex-wrap gap-3">
+          <div className="flex gap-2 overflow-x-auto rounded-[1.5rem] border border-gray-100 bg-white p-2 shadow-sm lg:hidden sm:flex-wrap sm:gap-3 sm:rounded-[2.5rem] sm:p-4">
             {tabs.map((item) => (
               <button
                 key={item.id}
                 type="button"
                 onClick={() => setTab(item.id)}
-                className={`px-5 py-3 rounded-full text-xs font-black uppercase tracking-widest border transition-all ${
+                className={`shrink-0 rounded-full border px-3 py-2.5 text-[10px] font-black uppercase tracking-widest transition-all sm:px-5 sm:py-3 sm:text-xs ${
                   tab === item.id
                     ? 'bg-slate-900 text-white border-slate-900'
                     : 'bg-white text-slate-500 border-slate-200 hover:border-slate-400'
@@ -312,8 +546,8 @@ const AdminDashboard = ({ user }) => {
           </div>
 
           {tab === 'overview' && overview ? (
-            <div className="grid md:grid-cols-2 gap-6">
-              <div className="bg-white rounded-[2rem] p-6 border border-slate-100 shadow-sm">
+            <div className="grid gap-4 md:grid-cols-2 md:gap-6">
+              <div className="rounded-[1.75rem] border border-slate-100 bg-white p-5 shadow-sm sm:rounded-[2rem] sm:p-6">
                 <h2 className="text-xl font-black text-slate-800 mb-5">Người dùng mới gần đây</h2>
                 <div className="space-y-4">
                   {overview.recentUsers.map((item) => (
@@ -333,7 +567,7 @@ const AdminDashboard = ({ user }) => {
                 </div>
               </div>
 
-              <div className="bg-white rounded-[2rem] p-6 border border-slate-100 shadow-sm">
+              <div className="rounded-[1.75rem] border border-slate-100 bg-white p-5 shadow-sm sm:rounded-[2rem] sm:p-6">
                 <h2 className="text-xl font-black text-slate-800 mb-5">Bài viết mới gần đây</h2>
                 <div className="space-y-4">
                   {overview.recentPosts.map((item) => (
@@ -352,8 +586,20 @@ const AdminDashboard = ({ user }) => {
           ) : null}
 
           {tab === 'users' ? (
-            <div className="bg-white rounded-[2.5rem] p-6 shadow-sm border border-gray-100 overflow-x-auto">
-              <h2 className="text-xl font-black text-slate-900 mb-5">Quản lý người dùng</h2>
+            <div className="overflow-x-auto rounded-[1.75rem] border border-gray-100 bg-white p-4 shadow-sm sm:rounded-[2.5rem] sm:p-6">
+              <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+                <h2 className="text-xl font-black text-slate-900">Quản lý người dùng</h2>
+                <select
+                  value={filters.userRole}
+                  onChange={(e) => setFilters((prev) => ({ ...prev, userRole: e.target.value }))}
+                  className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-xs font-black uppercase text-slate-600 outline-none"
+                >
+                  <option value="all">Tất cả vai trò</option>
+                  <option value="khach_du_lich">Khách du lịch</option>
+                  <option value="khu_du_lich">Khu du lịch</option>
+                  <option value="admin">Admin</option>
+                </select>
+              </div>
               <table className="w-full min-w-[980px] text-sm">
                 <thead>
                   <tr className="text-left text-slate-400 uppercase text-[11px] tracking-widest">
@@ -367,7 +613,7 @@ const AdminDashboard = ({ user }) => {
                   </tr>
                 </thead>
                 <tbody>
-                  {users.map((item) => (
+                  {filteredUsers.map((item) => (
                     <tr key={item.id} className="border-t border-slate-100">
                       <td className="py-4">
                         <p className="font-black text-slate-800">{item.ten}</p>
@@ -411,8 +657,171 @@ const AdminDashboard = ({ user }) => {
             </div>
           ) : null}
 
+          {tab === 'posts' ? (
+            <div className="overflow-x-auto rounded-[1.75rem] border border-gray-100 bg-white p-4 shadow-sm sm:rounded-[2.5rem] sm:p-6">
+              <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+                <h2 className="text-xl font-black text-slate-900">Tất cả bài viết</h2>
+                <select
+                  value={filters.postRole}
+                  onChange={(e) => setFilters((prev) => ({ ...prev, postRole: e.target.value }))}
+                  className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-xs font-black uppercase text-slate-600 outline-none"
+                >
+                  <option value="all">Tất cả tác giả</option>
+                  <option value="khach_du_lich">Khách du lịch</option>
+                  <option value="khu_du_lich">Khu du lịch</option>
+                  <option value="admin">Admin</option>
+                </select>
+              </div>
+              <table className="w-full min-w-[1040px] text-sm">
+                <thead>
+                  <tr className="text-left text-[11px] uppercase tracking-widest text-slate-400">
+                    <th className="pb-4">Bài viết</th>
+                    <th className="pb-4">Tác giả</th>
+                    <th className="pb-4">Vai trò</th>
+                    <th className="pb-4">Danh mục</th>
+                    <th className="pb-4">Tương tác</th>
+                    <th className="pb-4">Ngày đăng</th>
+                    <th className="pb-4">Thao tác</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredPosts.map((item) => (
+                    <tr key={item.id} className="border-t border-slate-100 align-top">
+                      <td className="max-w-[320px] py-4">
+                        <p className="font-black text-slate-800">{item.tieu_de || 'Không tiêu đề'}</p>
+                        <p className="mt-1 line-clamp-2 text-xs font-medium leading-relaxed text-slate-500">
+                          {item.noi_dung || '--'}
+                        </p>
+                      </td>
+                      <td className="py-4">
+                        <p className="font-black text-slate-700">{item.author_name}</p>
+                        <p className="text-xs text-slate-500">{item.author_email}</p>
+                      </td>
+                      <td className="py-4 font-bold text-slate-600">{item.author_role}</td>
+                      <td className="py-4 font-bold text-slate-600">{item.danh_muc || 'Tổng hợp'}</td>
+                      <td className="py-4 font-bold text-slate-600">
+                        {Number(item.total_likes || 0)} thích / {Number(item.total_comments || 0)} bình luận
+                      </td>
+                      <td className="py-4 font-bold text-slate-500">{formatDateTime(item.ngay_tao)}</td>
+                      <td className="py-4">
+                        <div className="flex flex-wrap gap-2">
+                          <button
+                            onClick={() => window.open(`/post/${item.id}`, '_blank')}
+                            className="rounded-xl bg-blue-50 px-4 py-2 text-xs font-black uppercase tracking-widest text-blue-700"
+                          >
+                            Xem
+                          </button>
+                          <button
+                            onClick={() => handleDeletePost(item)}
+                            disabled={Boolean(actionLoading)}
+                            className="rounded-xl bg-rose-50 px-4 py-2 text-xs font-black uppercase tracking-widest text-rose-700"
+                          >
+                            {actionLoading === `post-delete-${item.id}` ? 'Đang xóa...' : 'Xóa'}
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : null}
+
+          {tab === 'reports' ? (
+            <div className="overflow-x-auto rounded-[1.75rem] border border-gray-100 bg-white p-4 shadow-sm sm:rounded-[2.5rem] sm:p-6">
+              <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+                <h2 className="text-xl font-black text-slate-900">Báo cáo bài viết</h2>
+                <select
+                  value={filters.reportStatus}
+                  onChange={(e) => setFilters((prev) => ({ ...prev, reportStatus: e.target.value }))}
+                  className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-xs font-black uppercase text-slate-600 outline-none"
+                >
+                  <option value="all">Tất cả báo cáo</option>
+                  <option value="pending">Chờ xử lý</option>
+                  <option value="reviewed">Đã xử lý</option>
+                  <option value="dismissed">Bỏ qua</option>
+                </select>
+              </div>
+              <div className="mb-6 grid gap-4 xl:grid-cols-[1fr_1.1fr]">
+                <ReportDonutChart items={reportStatusChart} total={reports.length} />
+                <ReportReasonBars items={reportReasonChart} total={filteredReports.length} />
+              </div>
+              <table className="w-full min-w-[1120px] text-sm">
+                <thead>
+                  <tr className="text-left text-[11px] uppercase tracking-widest text-slate-400">
+                    <th className="pb-4">Bài viết</th>
+                    <th className="pb-4">Tác giả</th>
+                    <th className="pb-4">Người báo cáo</th>
+                    <th className="pb-4">Lý do</th>
+                    <th className="pb-4">Trạng thái</th>
+                    <th className="pb-4">Ngày báo cáo</th>
+                    <th className="pb-4">Thao tác</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredReports.map((item) => (
+                    <tr key={item.id} className="border-t border-slate-100 align-top">
+                      <td className="max-w-[280px] py-4">
+                        <p className="font-black text-slate-800">{item.tieu_de || 'Không tiêu đề'}</p>
+                        <p className="mt-1 line-clamp-2 text-xs font-medium leading-relaxed text-slate-500">
+                          {item.noi_dung || '--'}
+                        </p>
+                      </td>
+                      <td className="py-4">
+                        <p className="font-black text-slate-700">{item.author_name}</p>
+                        <p className="text-xs text-slate-500">{item.author_email}</p>
+                      </td>
+                      <td className="py-4">
+                        <p className="font-black text-slate-700">{item.reporter_name}</p>
+                        <p className="text-xs text-slate-500">{item.reporter_email}</p>
+                      </td>
+                      <td className="max-w-[240px] py-4 text-xs font-bold leading-relaxed text-slate-600">
+                        {item.ly_do}
+                      </td>
+                      <td className="py-4">
+                        <ReportStatusBadge value={item.trang_thai} />
+                      </td>
+                      <td className="py-4 font-bold text-slate-500">{formatDateTime(item.ngay_tao)}</td>
+                      <td className="py-4">
+                        <div className="flex flex-wrap gap-2">
+                          <button
+                            onClick={() => window.open(`/post/${item.id_bai_viet}`, '_blank')}
+                            className="rounded-xl bg-blue-50 px-3 py-2 text-xs font-black uppercase tracking-widest text-blue-700"
+                          >
+                            Xem
+                          </button>
+                          <button
+                            onClick={() => handleReportStatus(item, 'reviewed')}
+                            disabled={Boolean(actionLoading)}
+                            className="rounded-xl bg-emerald-50 px-3 py-2 text-xs font-black uppercase tracking-widest text-emerald-700"
+                          >
+                            Xử lý
+                          </button>
+                          <button
+                            onClick={() => handleReportStatus(item, 'dismissed')}
+                            disabled={Boolean(actionLoading)}
+                            className="rounded-xl bg-slate-100 px-3 py-2 text-xs font-black uppercase tracking-widest text-slate-600"
+                          >
+                            Bỏ qua
+                          </button>
+                          <button
+                            onClick={() => handleDeletePost({ id: item.id_bai_viet, tieu_de: item.tieu_de })}
+                            disabled={Boolean(actionLoading)}
+                            className="rounded-xl bg-rose-50 px-3 py-2 text-xs font-black uppercase tracking-widest text-rose-700"
+                          >
+                            Xóa bài
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : null}
+
           {tab === 'businesses' ? (
-            <div className="bg-white rounded-[2.5rem] p-6 shadow-sm border border-gray-100 overflow-x-auto">
+            <div className="overflow-x-auto rounded-[1.75rem] border border-gray-100 bg-white p-4 shadow-sm sm:rounded-[2.5rem] sm:p-6">
               <h2 className="text-xl font-black text-slate-900 mb-5">Duyệt đối tác khu du lịch</h2>
               <table className="w-full min-w-[1040px] text-sm">
                 <thead>
@@ -478,8 +887,21 @@ const AdminDashboard = ({ user }) => {
           ) : null}
 
           {tab === 'bookings' ? (
-            <div className="bg-white rounded-[2.5rem] p-6 shadow-sm border border-gray-100 overflow-x-auto">
-              <h2 className="text-xl font-black text-slate-900 mb-5">Theo dõi booking</h2>
+            <div className="overflow-x-auto rounded-[1.75rem] border border-gray-100 bg-white p-4 shadow-sm sm:rounded-[2.5rem] sm:p-6">
+              <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+                <h2 className="text-xl font-black text-slate-900">Theo dõi booking</h2>
+                <select
+                  value={filters.bookingStatus}
+                  onChange={(e) => setFilters((prev) => ({ ...prev, bookingStatus: e.target.value }))}
+                  className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-xs font-black uppercase text-slate-600 outline-none"
+                >
+                  <option value="all">Tất cả trạng thái</option>
+                  <option value="pending">Pending</option>
+                  <option value="confirmed">Confirmed</option>
+                  <option value="completed">Completed</option>
+                  <option value="cancelled">Cancelled</option>
+                </select>
+              </div>
               <table className="w-full min-w-[760px] text-sm">
                 <thead>
                   <tr className="text-left text-slate-400 uppercase text-[11px] tracking-widest">
@@ -492,7 +914,7 @@ const AdminDashboard = ({ user }) => {
                   </tr>
                 </thead>
                 <tbody>
-                  {bookings.map((item) => (
+                  {filteredBookings.map((item) => (
                     <tr key={item.id} className="border-t border-slate-100">
                       <td className="py-4 font-black text-slate-800">{item.customer_name || item.ten_khach}</td>
                       <td className="py-4 font-bold text-slate-600">{item.business_name || '--'}</td>
@@ -508,8 +930,20 @@ const AdminDashboard = ({ user }) => {
           ) : null}
 
           {tab === 'payments' ? (
-            <div className="bg-white rounded-[2.5rem] p-6 shadow-sm border border-gray-100 overflow-x-auto">
-              <h2 className="text-xl font-black text-slate-900 mb-5">Theo dõi thanh toán</h2>
+            <div className="overflow-x-auto rounded-[1.75rem] border border-gray-100 bg-white p-4 shadow-sm sm:rounded-[2.5rem] sm:p-6">
+              <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+                <h2 className="text-xl font-black text-slate-900">Theo dõi thanh toán</h2>
+                <select
+                  value={filters.paymentStatus}
+                  onChange={(e) => setFilters((prev) => ({ ...prev, paymentStatus: e.target.value }))}
+                  className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-xs font-black uppercase text-slate-600 outline-none"
+                >
+                  <option value="all">Tất cả trạng thái</option>
+                  <option value="pending">Pending</option>
+                  <option value="completed">Completed</option>
+                  <option value="cancelled">Cancelled</option>
+                </select>
+              </div>
               <table className="w-full min-w-[760px] text-sm">
                 <thead>
                   <tr className="text-left text-slate-400 uppercase text-[11px] tracking-widest">
@@ -522,7 +956,7 @@ const AdminDashboard = ({ user }) => {
                   </tr>
                 </thead>
                 <tbody>
-                  {payments.map((item) => (
+                  {filteredPayments.map((item) => (
                     <tr key={item.id} className="border-t border-slate-100">
                       <td className="py-4 font-black text-slate-800">{item.customer_name || '--'}</td>
                       <td className="py-4 font-bold text-slate-600">{item.business_name || item.ten_kdl || '--'}</td>
@@ -539,7 +973,7 @@ const AdminDashboard = ({ user }) => {
 
           {tab === 'platform' ? (
             <div className="space-y-6">
-              <div className="bg-white rounded-[2.5rem] p-6 shadow-sm border border-gray-100">
+              <div className="rounded-[1.75rem] border border-gray-100 bg-white p-4 shadow-sm sm:rounded-[2.5rem] sm:p-6">
                 <h2 className="text-xl font-black text-slate-900 mb-5">Cấu hình hoa hồng</h2>
                 <div className="grid md:grid-cols-[1fr_auto] gap-4 items-end">
                   <div>
@@ -574,7 +1008,99 @@ const AdminDashboard = ({ user }) => {
                 </div>
               </div>
 
-              <div className="bg-white rounded-[2.5rem] p-6 shadow-sm border border-gray-100">
+              <div className="rounded-[1.75rem] border border-gray-100 bg-white p-4 shadow-sm sm:rounded-[2.5rem] sm:p-6">
+                <h2 className="mb-5 text-xl font-black text-slate-900">Logo và hỗ trợ</h2>
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div>
+                    <label className="mb-3 block text-[11px] font-black uppercase tracking-widest text-slate-400">
+                      Tên hệ thống
+                    </label>
+                    <input
+                      value={platformSettings.site_branding?.app_name || ''}
+                      onChange={(e) =>
+                        setPlatformSettings((prev) => ({
+                          ...prev,
+                          site_branding: {
+                            ...(prev.site_branding || {}),
+                            app_name: e.target.value,
+                          },
+                        }))
+                      }
+                      className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-5 py-4 font-bold text-slate-700 outline-none focus:border-slate-400"
+                      placeholder="TravelConnect"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="mb-3 block text-[11px] font-black uppercase tracking-widest text-slate-400">
+                      URL logo
+                    </label>
+                    <input
+                      value={platformSettings.site_branding?.logo_url || ''}
+                      onChange={(e) =>
+                        setPlatformSettings((prev) => ({
+                          ...prev,
+                          site_branding: {
+                            ...(prev.site_branding || {}),
+                            logo_url: e.target.value,
+                          },
+                        }))
+                      }
+                      className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-5 py-4 font-bold text-slate-700 outline-none focus:border-slate-400"
+                      placeholder="https://example.com/logo.png"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="mb-3 block text-[11px] font-black uppercase tracking-widest text-slate-400">
+                      Tiêu đề hỗ trợ
+                    </label>
+                    <input
+                      value={platformSettings.support_content?.title || ''}
+                      onChange={(e) =>
+                        setPlatformSettings((prev) => ({
+                          ...prev,
+                          support_content: {
+                            ...(prev.support_content || {}),
+                            title: e.target.value,
+                          },
+                        }))
+                      }
+                      className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-5 py-4 font-bold text-slate-700 outline-none focus:border-slate-400"
+                      placeholder="Can ho tro?"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="mb-3 block text-[11px] font-black uppercase tracking-widest text-slate-400">
+                      Nội dung hỗ trợ
+                    </label>
+                    <input
+                      value={platformSettings.support_content?.message || ''}
+                      onChange={(e) =>
+                        setPlatformSettings((prev) => ({
+                          ...prev,
+                          support_content: {
+                            ...(prev.support_content || {}),
+                            message: e.target.value,
+                          },
+                        }))
+                      }
+                      className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-5 py-4 font-bold text-slate-700 outline-none focus:border-slate-400"
+                      placeholder="Lien he tong dai TravelConnect 24/7"
+                    />
+                  </div>
+                </div>
+                <button
+                  onClick={handlePlatformSettingsSave}
+                  disabled={Boolean(actionLoading)}
+                  className="mt-5 rounded-2xl bg-slate-900 px-5 py-4 text-xs font-black uppercase tracking-widest text-white"
+                >
+                  {actionLoading === 'platform-settings' ? 'Đang lưu...' : 'Lưu logo và hỗ trợ'}
+                </button>
+              </div>
+
+              <div className="rounded-[1.75rem] border border-gray-100 bg-white p-4 shadow-sm sm:rounded-[2.5rem] sm:p-6">
                 <h2 className="text-xl font-black text-slate-900 mb-5">Thêm danh mục</h2>
                 <form onSubmit={handleCreateCategory} className="grid md:grid-cols-4 gap-4">
                   <input
@@ -610,7 +1136,7 @@ const AdminDashboard = ({ user }) => {
                 </form>
               </div>
 
-              <div className="bg-white rounded-[2.5rem] p-6 shadow-sm border border-gray-100 overflow-x-auto">
+              <div className="overflow-x-auto rounded-[1.75rem] border border-gray-100 bg-white p-4 shadow-sm sm:rounded-[2.5rem] sm:p-6">
                 <h2 className="text-xl font-black text-slate-900 mb-5">Danh sách danh mục</h2>
                 <table className="w-full min-w-[860px] text-sm">
                   <thead>

@@ -195,5 +195,4 @@ Backend co co che tu tao tai khoan admin mac dinh neu chua ton tai trong databas
 ## Thanh vien thuc hien
 
 - Phan Dinh Luyen - 22050036
-- Vu Duy Hoang - 22050038
-- Nguyen Hoang Vu - 22050072
+

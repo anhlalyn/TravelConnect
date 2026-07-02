@@ -9,6 +9,8 @@ router.get('/saved-list', authMiddleware, postController.getSavedPosts);
 router.post('/save', authMiddleware, postController.toggleSavePost);
 router.post('/like', authMiddleware, postController.likePost);
 router.post('/comment', authMiddleware, postController.commentPost);
+router.post('/:id/report', authMiddleware, postController.reportPost);
+router.get('/tagged-me', authMiddleware, postController.getTaggedPostsForBusiness);
 
 // Dòng này nãy bị lỗi vì controller chưa có hàm, giờ đã ổn:
 router.get('/:id/comments', authMiddleware, postController.getCommentsByPost);

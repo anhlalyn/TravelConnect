@@ -1,0 +1,13 @@
+node_modules
+npm-debug.log
+.env
+.git
+.gitignore
+uploads
+backend/uploads
+backend/public
+frontend/dist
+frontend/node_modules
+*.docx
+*.pptx
+docs

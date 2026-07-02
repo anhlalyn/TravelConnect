@@ -5,60 +5,69 @@ Tài liệu này tổng hợp các sơ đồ nghiệp vụ và dữ liệu cốt
 ## 1. Sơ đồ Use Case
 
 ```mermaid
-flowchart LR
+flowchart TB
     KD[Khách du lịch]
-    DT[Đối tác khu du lịch]
+    DT[Đối tác KDL]
     QT[Quản trị viên]
-
-    UC1((Đăng ký tài khoản))
-    UC2((Đăng nhập))
-    UC3((Quên mật khẩu / OTP))
-    UC4((Xem và cập nhật hồ sơ))
-    UC5((Đăng bài chia sẻ))
-    UC6((Khám phá bài viết))
-    UC7((Lưu, thích, bình luận, đánh giá))
-    UC8((Đặt vé / booking))
-    UC9((Thanh toán ví))
-    UC10((Xem booking của tôi))
-    UC11((Kết bạn và nhắn tin))
-    UC12((Quản lý hồ sơ khu du lịch))
-    UC13((Quản lý gói dịch vụ))
-    UC14((Quản lý booking và quét QR))
-    UC15((Xem thống kê kinh doanh))
-    UC16((Quản lý người dùng))
-    UC17((Quản lý trạng thái hồ sơ khu du lịch))
-    UC18((Quản lý danh mục và cấu hình nền tảng))
-    UC19((Giám sát bài viết, thanh toán, booking))
-
+    
+    subgraph System["Hệ thống TravelConnect"]
+        direction TB
+        
+        subgraph Row1["Phân hệ Client & Tương tác"]
+            direction LR
+            subgraph G1["Thành viên & Chat"]
+                direction TB
+                UC1((Đăng ký & Đăng nhập))
+                UC2((Hồ sơ cá nhân))
+                UC3((Kết bạn & Chat))
+            end
+            subgraph G2["Trải nghiệm Khách"]
+                direction TB
+                UC4((Đăng bài & Review))
+                UC5((Đặt vé & Ví ảo))
+                UC6((Xem vé & QR))
+            end
+        end
+        
+        subgraph Row2["Phân hệ Đối tác & Admin"]
+            direction LR
+            subgraph G3["Quản lý Đối tác KDL"]
+                direction TB
+                UC7((Cấu hình dịch vụ))
+                UC8((Xác nhận & Check-in))
+                UC9((Thống kê doanh thu))
+            end
+            subgraph G4["Hệ thống & Admin"]
+                direction TB
+                UC10((Quản lý tài khoản))
+                UC11((Duyệt đối tác KDL))
+                UC12((Cấu hình hoa hồng))
+            end
+        end
+        
+        Row1 ~~~ Row2
+    end
+    
     KD --> UC1
     KD --> UC2
     KD --> UC3
     KD --> UC4
     KD --> UC5
     KD --> UC6
-    KD --> UC7
-    KD --> UC8
-    KD --> UC9
-    KD --> UC10
-    KD --> UC11
-
+    
     DT --> UC1
     DT --> UC2
     DT --> UC3
     DT --> UC4
-    DT --> UC5
-    DT --> UC6
-    DT --> UC12
-    DT --> UC13
-    DT --> UC14
-    DT --> UC15
-    DT --> UC11
-
+    DT --> UC7
+    DT --> UC8
+    DT --> UC9
+    
+    QT --> UC1
     QT --> UC2
-    QT --> UC16
-    QT --> UC17
-    QT --> UC18
-    QT --> UC19
+    QT --> UC10
+    QT --> UC11
+    QT --> UC12
 ```
 
 ## 2. Sơ đồ luồng dữ liệu DFD

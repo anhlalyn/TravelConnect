@@ -68,6 +68,20 @@ async function ensureSettingsTable() {
       khoa: "referral_commission_rate",
       giaTri: { value: 0.1 },
     },
+    {
+      khoa: "site_branding",
+      giaTri: {
+        app_name: "TravelConnect",
+        logo_url: "",
+      },
+    },
+    {
+      khoa: "support_content",
+      giaTri: {
+        title: "Can ho tro?",
+        message: "Lien he tong dai TravelConnect 24/7",
+      },
+    },
   ];
 
   for (const setting of defaultSettings) {
@@ -79,6 +93,27 @@ async function ensureSettingsTable() {
       `,
       [setting.khoa, JSON.stringify(setting.giaTri)],
     );
+  }
+}
+
+async function ensurePostReportTable() {
+  const exists = await tableExists("bao_cao_bai_viet");
+  if (!exists) {
+    await db.query(`
+      CREATE TABLE IF NOT EXISTS bao_cao_bai_viet (
+        id INT PRIMARY KEY AUTO_INCREMENT,
+        id_bai_viet INT NOT NULL,
+        id_nguoi_bao_cao INT NOT NULL,
+        ly_do TEXT NOT NULL,
+        trang_thai ENUM('pending', 'reviewed', 'dismissed') NOT NULL DEFAULT 'pending',
+        ghi_chu_admin TEXT NULL,
+        ngay_tao TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        ngay_xu_ly DATETIME NULL,
+        UNIQUE KEY unique_post_reporter (id_bai_viet, id_nguoi_bao_cao),
+        CONSTRAINT bao_cao_bai_viet_post_fk FOREIGN KEY (id_bai_viet) REFERENCES bai_viet (id) ON DELETE CASCADE,
+        CONSTRAINT bao_cao_bai_viet_user_fk FOREIGN KEY (id_nguoi_bao_cao) REFERENCES nguoi_dung (id) ON DELETE CASCADE
+      )
+    `);
   }
 }
 
@@ -174,6 +209,7 @@ async function ensurePlatformColumns() {
 
   await ensureCategoryTable();
   await ensureSettingsTable();
+  await ensurePostReportTable();
 }
 
 async function getPlatformSetting(khoa, fallbackValue = null) {
@@ -226,4 +262,5 @@ module.exports = {
   getPlatformSetting,
   setPlatformSetting,
   getPostCategories,
+  ensurePostReportTable,
 };

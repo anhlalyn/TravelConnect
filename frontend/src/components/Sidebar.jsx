@@ -1,5 +1,6 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import {
+  AtSign,
   BarChart3,
   Bookmark,
   ClipboardList,
@@ -14,15 +15,52 @@ import {
   Zap,
 } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
+import api from "../api";
 import { buildUploadUrl } from "../config";
 import { getTrustBadge } from "../utils/trustBadge";
 
-const Sidebar = ({ user }) => {
+const Sidebar = ({
+  user,
+  onNavigate,
+  adminTabs = [],
+  activeAdminTab = "",
+  onAdminTabChange,
+}) => {
   const navigate = useNavigate();
   const location = useLocation();
+  const [supportContent, setSupportContent] = useState({
+    title: "Can ho tro?",
+    message: "Lien he tong dai TravelConnect 24/7",
+  });
   const isActive = (path) => location.pathname === path;
   const isTourist = user?.vai_tro === "khach_du_lich";
   const trustBadge = getTrustBadge(user?.diem_tin_cay);
+
+  useEffect(() => {
+    let active = true;
+
+    const loadPlatformSettings = async () => {
+      try {
+        const res = await api.get("/platform/settings");
+        if (active && res.data.success) {
+          setSupportContent(
+            res.data.data?.support_content || {
+              title: "Can ho tro?",
+              message: "Lien he tong dai TravelConnect 24/7",
+            },
+          );
+        }
+      } catch (err) {
+        if (active) console.error("Khong the tai noi dung ho tro:", err);
+      }
+    };
+
+    loadPlatformSettings();
+
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const userMenu = [
     {
@@ -128,6 +166,13 @@ const Sidebar = ({ user }) => {
       activeBg: "bg-amber-50",
     },
     {
+      icon: <AtSign size={20} />,
+      label: "Bài Viết Tag",
+      path: "/kdl/tagged-posts",
+      color: "text-indigo-600",
+      activeBg: "bg-indigo-50",
+    },
+    {
       icon: <BarChart3 size={20} />,
       label: "Thống Kê",
       path: "/analytics",
@@ -144,7 +189,6 @@ const Sidebar = ({ user }) => {
       color: "text-slate-700",
       activeBg: "bg-slate-100",
     },
-    ...businessMenu,
   ];
 
   const currentMenu =
@@ -231,7 +275,10 @@ const Sidebar = ({ user }) => {
           return (
             <button
               key={index}
-              onClick={() => navigate(item.path)}
+              onClick={() => {
+                navigate(item.path);
+                onNavigate?.();
+              }}
               className={`group flex w-full items-center justify-between rounded-2xl p-4 text-[12px] font-black uppercase tracking-tight transition-all ${
                 active
                   ? `${item.activeBg} ${item.color} translate-x-1 shadow-sm`
@@ -255,14 +302,44 @@ const Sidebar = ({ user }) => {
             </button>
           );
         })}
+
+        {user?.vai_tro === "admin" && adminTabs.length > 0 && (
+          <>
+            <div className="mx-3 my-3 h-px bg-gray-100" />
+            <p className="px-4 pb-2 text-[10px] font-black uppercase tracking-widest text-slate-400">
+              Quản trị
+            </p>
+            {adminTabs.map((item) => {
+              const active = activeAdminTab === item.id;
+
+              return (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => {
+                    onAdminTabChange?.(item.id);
+                    onNavigate?.();
+                  }}
+                  className={`group flex w-full items-center rounded-2xl p-4 text-[12px] font-black uppercase tracking-tight transition-all ${
+                    active
+                      ? "translate-x-1 bg-slate-100 text-slate-900 shadow-sm"
+                      : "text-slate-500 hover:bg-gray-50 hover:text-slate-800"
+                  }`}
+                >
+                  {item.label}
+                </button>
+              );
+            })}
+          </>
+        )}
       </div>
 
       <div className="relative overflow-hidden rounded-[2.5rem] bg-gradient-to-br from-slate-800 to-slate-900 p-6 text-white">
         <p className="mb-1 text-[10px] font-black uppercase opacity-50">
-          Can ho tro?
+          {supportContent.title}
         </p>
         <p className="relative z-10 text-xs font-bold leading-relaxed">
-          Lien he tong dai TravelConnect 24/7
+          {supportContent.message}
         </p>
         <Zap
           size={60}

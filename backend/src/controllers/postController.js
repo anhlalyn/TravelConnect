@@ -1,7 +1,12 @@
 const db = require("../config/db");
 const { tableExists, columnExists } = require("../utils/dbFeature");
-const { ensurePlatformColumns, getPostCategories } = require("../utils/platformSchema");
+const {
+  ensurePlatformColumns,
+  ensurePostReportTable,
+  getPostCategories,
+} = require("../utils/platformSchema");
 const { buildPostCompliance, normalizeMediaList } = require("../utils/postCompliance");
+const { createNotification } = require("../utils/notification");
 
 const parseJsonArray = (value) => {
   if (Array.isArray(value)) return value;
@@ -49,6 +54,21 @@ const resolveCategoryName = async (category) => {
   const categories = await getPostCategories();
   const matched = categories.find((item) => item.ten.toLowerCase() === normalized.toLowerCase());
   return matched?.ten || "Tổng hợp";
+};
+
+const notifyTaggedBusiness = async ({ businessId, senderId, businessName, postId }) => {
+  const taggedBusinessId = Number(businessId);
+  const authorId = Number(senderId);
+
+  if (!taggedBusinessId || taggedBusinessId === authorId) return;
+
+  await createNotification(
+    taggedBusinessId,
+    authorId,
+    `đã nhắc đến ${businessName || "khu du lịch của bạn"} trong một bài viết`,
+    "he_thong",
+    postId,
+  );
 };
 
 const mapPost = (post, hasCategoryColumn) => ({
@@ -115,7 +135,33 @@ exports.getAllPosts = async (req, res) => {
     let sql = "";
     let params = [];
 
-    if (mode === "explore") {
+    if (mode === "home" && req.user.vai_tro === "admin") {
+      sql = `
+        SELECT bv.*${hasCategoryColumn ? ", bv.danh_muc" : ""},
+               nd.ten AS ten_nguoi_dang,
+               nd.anh_dai_dien,
+               nd.vai_tro,
+               nd.diem_tin_cay,
+               hs.ten_khu_du_lich,
+               hs.tinh_thanh,
+               COUNT(DISTINCT lt.id) AS tong_luot_thich,
+               COUNT(DISTINCT bl.id) AS tong_binh_luan,
+               COUNT(DISTINCT dg.id) AS tong_danh_gia,
+               ROUND(AVG(dg.so_sao), 1) AS diem_danh_gia,
+               MAX(CASE WHEN lt.id_nguoi_dung = ? THEN 1 ELSE 0 END) AS da_thich,
+               MAX(CASE WHEN bvl.id_nguoi_dung IS NOT NULL THEN 1 ELSE 0 END) AS da_luu
+        FROM bai_viet bv
+        JOIN nguoi_dung nd ON bv.id_nguoi_dung = nd.id
+        LEFT JOIN ho_so_khu_du_lich hs ON hs.id_nguoi_dung = nd.id
+        LEFT JOIN luot_thich lt ON bv.id = lt.id_bai_viet
+        LEFT JOIN binh_luan bl ON bv.id = bl.id_bai_viet
+        LEFT JOIN danh_gia_kdl dg ON bv.id = dg.id_bai_viet
+        LEFT JOIN bai_viet_da_luu bvl ON bv.id = bvl.id_bai_viet AND bvl.id_nguoi_dung = ?
+        GROUP BY bv.id
+        ORDER BY bv.ngay_tao DESC
+      `;
+      params = [userId, userId];
+    } else if (mode === "explore") {
       const prioritizeOwnPosts = req.user.vai_tro === "khu_du_lich";
       sql = `
         SELECT bv.*${hasCategoryColumn ? ", bv.danh_muc" : ""},
@@ -244,6 +290,13 @@ exports.createPost = async (req, res) => {
         ],
       );
 
+      await notifyTaggedBusiness({
+        businessId: id_kdl_gan_the,
+        senderId: id_nguoi_dung,
+        businessName: ten_kdl_gan_the,
+        postId: result.insertId,
+      });
+
       return res.json({
         success: true,
         message: "Thành công!",
@@ -270,11 +323,72 @@ exports.createPost = async (req, res) => {
       ],
     );
 
+    await notifyTaggedBusiness({
+      businessId: id_kdl_gan_the,
+      senderId: id_nguoi_dung,
+      businessName: ten_kdl_gan_the,
+      postId: result.insertId,
+    });
+
     res.json({
       success: true,
       message: "Thành công!",
       postId: result.insertId,
       compliance,
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+};
+
+exports.getTaggedPostsForBusiness = async (req, res) => {
+  const userId = Number(req.user.id);
+
+  try {
+    if (req.user.vai_tro !== "khu_du_lich" && req.user.vai_tro !== "admin") {
+      return res.status(403).json({
+        success: false,
+        message: "Chỉ tài khoản khu du lịch mới xem được bài viết được gắn thẻ",
+      });
+    }
+
+    await ensurePlatformColumns();
+    await ensureReviewTable();
+    const hasCategoryColumn = await columnExists("bai_viet", "danh_muc");
+
+    const [posts] = await db.query(
+      `
+        SELECT bv.*${hasCategoryColumn ? ", bv.danh_muc" : ""},
+               nd.ten AS ten_nguoi_dang,
+               nd.anh_dai_dien,
+               nd.vai_tro,
+               nd.diem_tin_cay,
+               hs.ten_khu_du_lich,
+               hs.tinh_thanh,
+               hs.dia_chi_chi_tiet,
+               COUNT(DISTINCT lt.id) AS tong_luot_thich,
+               COUNT(DISTINCT bl.id) AS tong_binh_luan,
+               COUNT(DISTINCT dg.id) AS tong_danh_gia,
+               ROUND(AVG(dg.so_sao), 1) AS diem_danh_gia,
+               MAX(CASE WHEN lt.id_nguoi_dung = ? THEN 1 ELSE 0 END) AS da_thich,
+               MAX(CASE WHEN bvl.id_nguoi_dung IS NOT NULL THEN 1 ELSE 0 END) AS da_luu
+        FROM bai_viet bv
+        JOIN nguoi_dung nd ON bv.id_nguoi_dung = nd.id
+        LEFT JOIN ho_so_khu_du_lich hs ON hs.id_nguoi_dung = nd.id
+        LEFT JOIN luot_thich lt ON bv.id = lt.id_bai_viet
+        LEFT JOIN binh_luan bl ON bv.id = bl.id_bai_viet
+        LEFT JOIN danh_gia_kdl dg ON bv.id = dg.id_bai_viet
+        LEFT JOIN bai_viet_da_luu bvl ON bv.id = bvl.id_bai_viet AND bvl.id_nguoi_dung = ?
+        WHERE bv.id_kdl_gan_the = ?
+        GROUP BY bv.id
+        ORDER BY bv.ngay_tao DESC
+      `,
+      [userId, userId, userId],
+    );
+
+    res.json({
+      success: true,
+      data: posts.map((post) => mapPost(post, hasCategoryColumn)),
     });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
@@ -450,6 +564,60 @@ exports.toggleSavePost = async (req, res) => {
     );
 
     res.json({ success: true, saved: true, message: "Đã lưu bài viết" });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+};
+
+exports.reportPost = async (req, res) => {
+  const { id } = req.params;
+  const userId = req.user.id;
+  const reason = String(req.body.ly_do || "").trim();
+
+  if (!reason) {
+    return res.status(400).json({
+      success: false,
+      message: "Vui long nhap ly do bao cao.",
+    });
+  }
+
+  try {
+    await ensurePostReportTable();
+
+    const [posts] = await db.query(
+      "SELECT id, id_nguoi_dung FROM bai_viet WHERE id = ? LIMIT 1",
+      [id],
+    );
+
+    if (!posts.length) {
+      return res.status(404).json({
+        success: false,
+        message: "Khong tim thay bai viet.",
+      });
+    }
+
+    if (Number(posts[0].id_nguoi_dung) === Number(userId)) {
+      return res.status(400).json({
+        success: false,
+        message: "Ban khong the bao cao bai viet cua chinh minh.",
+      });
+    }
+
+    await db.query(
+      `
+        INSERT INTO bao_cao_bai_viet (id_bai_viet, id_nguoi_bao_cao, ly_do)
+        VALUES (?, ?, ?)
+        ON DUPLICATE KEY UPDATE
+          ly_do = VALUES(ly_do),
+          trang_thai = 'pending',
+          ghi_chu_admin = NULL,
+          ngay_tao = CURRENT_TIMESTAMP,
+          ngay_xu_ly = NULL
+      `,
+      [id, userId, reason],
+    );
+
+    res.json({ success: true, message: "Da gui bao cao bai viet." });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
   }

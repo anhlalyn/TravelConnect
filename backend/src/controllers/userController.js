@@ -135,6 +135,7 @@ exports.getFriendsList = async (req, res) => {
 
 exports.getUserProfile = async (req, res) => {
   const { id } = req.params;
+  const currentUserId = req.user?.id;
 
   try {
     await ensurePlatformColumns();
@@ -169,6 +170,8 @@ exports.getUserProfile = async (req, res) => {
         SELECT bv.*, nd.ten AS ten_nguoi_dang, nd.anh_dai_dien, nd.vai_tro,
                (SELECT COUNT(*) FROM luot_thich WHERE id_bai_viet = bv.id) AS tong_luot_thich,
                (SELECT COUNT(*) FROM binh_luan WHERE id_bai_viet = bv.id) AS tong_binh_luan,
+               (SELECT COUNT(*) FROM luot_thich WHERE id_bai_viet = bv.id AND id_nguoi_dung = ?) AS da_thich,
+               (SELECT COUNT(*) FROM bai_viet_da_luu WHERE id_bai_viet = bv.id AND id_nguoi_dung = ?) AS da_luu,
                ${hasReviewTable ? "(SELECT COUNT(*) FROM danh_gia_kdl dg WHERE dg.id_bai_viet = bv.id)" : "0"} AS tong_danh_gia,
                ${hasReviewTable ? "(SELECT ROUND(AVG(dg.so_sao), 1) FROM danh_gia_kdl dg WHERE dg.id_bai_viet = bv.id)" : "0"} AS diem_danh_gia
         FROM bai_viet bv
@@ -176,7 +179,7 @@ exports.getUserProfile = async (req, res) => {
         WHERE bv.id_nguoi_dung = ?
         ORDER BY bv.ngay_tao DESC
       `,
-      [id],
+      [currentUserId, currentUserId, id],
     );
 
     const formattedPosts = posts.map((post) => ({
@@ -185,9 +188,15 @@ exports.getUserProfile = async (req, res) => {
         typeof post.hinh_anh_json === "string"
           ? JSON.parse(post.hinh_anh_json || "[]")
           : post.hinh_anh_json || [],
+      media_json:
+        typeof post.media_json === "string"
+          ? JSON.parse(post.media_json || "[]")
+          : post.media_json || [],
       danh_muc: hasCategoryColumn ? post.danh_muc || "Tổng hợp" : "Tổng hợp",
       tong_danh_gia: post.tong_danh_gia || 0,
       diem_danh_gia: Number(post.diem_danh_gia || 0),
+      da_thich: Number(post.da_thich || 0) > 0,
+      da_luu: Number(post.da_luu || 0) > 0,
     }));
 
     res.json({ success: true, data: userInfo, posts: formattedPosts });

@@ -14,6 +14,7 @@ const HomePage = lazy(() => import('./page/Home'))
 const KDLAnalytics = lazy(() => import('./page/KDLAnalytics'))
 const KDLReviews = lazy(() => import('./page/KDLReviews'))
 const KDLServiceManagement = lazy(() => import('./page/KDLServiceManagement'))
+const KDLTaggedPosts = lazy(() => import('./page/KDLTaggedPosts'))
 const Login = lazy(() => import('./page/Login'))
 const LiveStream = lazy(() => import('./page/LiveStream'))
 const Messages = lazy(() => import('./page/Messages'))
@@ -208,6 +209,14 @@ function AppRoutes({ handleLoginSuccess, isAuth, setUser, user }) {
             element={
               <RouteGuard isAuth={isAuth}>
                 {withTransition(<KDLReviews user={user} />)}
+              </RouteGuard>
+            }
+          />
+          <Route
+            path="/kdl/tagged-posts"
+            element={
+              <RouteGuard isAuth={isAuth}>
+                {withTransition(<KDLTaggedPosts user={user} />)}
               </RouteGuard>
             }
           />

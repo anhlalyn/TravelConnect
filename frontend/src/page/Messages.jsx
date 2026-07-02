@@ -7,6 +7,7 @@ import React, {
 } from "react";
 import { useSearchParams } from "react-router-dom";
 import {
+  ChevronLeft,
   Image as ImageIcon,
   MessageSquare,
   Mic,
@@ -631,13 +632,17 @@ const Messages = () => {
     <div className="min-h-screen bg-[#F3F4F6]">
       <Navbar user={user} />
 
-      <div className="max-w-7xl mx-auto grid grid-cols-12 gap-6 pt-6 px-4 pb-10">
+      <div className="mx-auto grid max-w-7xl grid-cols-12 gap-4 px-3 pb-6 pt-4 sm:px-4 md:gap-6 md:pb-10 md:pt-6">
         <div className="hidden lg:block col-span-3">
           <Sidebar user={user} />
         </div>
 
-        <div className="col-span-12 lg:col-span-9 bg-white rounded-[2.5rem] shadow-sm border border-gray-100 flex overflow-hidden h-[82vh]">
-          <div className="w-full md:w-80 border-r border-gray-100 flex flex-col bg-white">
+        <div className="col-span-12 flex h-[calc(100vh-5.5rem)] overflow-hidden rounded-[1.75rem] border border-gray-100 bg-white shadow-sm sm:h-[82vh] sm:rounded-[2.5rem] lg:col-span-9">
+          <div
+            className={`w-full flex-col border-r border-gray-100 bg-white md:flex md:w-80 ${
+              activeRoom ? "hidden" : "flex"
+            }`}
+          >
             <div className="p-5 border-b border-gray-50 space-y-4">
               <div className="flex items-center justify-between gap-3">
                 <h2 className="text-xl font-black text-slate-800">Tin nhắn</h2>
@@ -739,11 +744,23 @@ const Messages = () => {
             </div>
           </div>
 
-          <div className="flex-1 flex flex-col bg-slate-50/50">
+          <div
+            className={`min-w-0 flex-1 flex-col bg-slate-50/50 md:flex ${
+              activeRoom ? "flex" : "hidden"
+            }`}
+          >
             {activeRoom ? (
               <>
-                <div className="p-4 bg-white border-b border-gray-100 flex justify-between items-center gap-3">
+                <div className="flex items-center justify-between gap-2 border-b border-gray-100 bg-white p-3 sm:gap-3 sm:p-4">
                   <div className="flex items-center gap-3 min-w-0">
+                    <button
+                      type="button"
+                      onClick={() => setActiveRoomId(null)}
+                      className="rounded-xl bg-slate-100 p-2 text-slate-500 transition-colors hover:bg-slate-900 hover:text-white md:hidden"
+                      aria-label="Quay lại danh sách chat"
+                    >
+                      <ChevronLeft size={18} />
+                    </button>
                     <div className="w-10 h-10 rounded-xl overflow-hidden flex items-center justify-center text-white font-bold uppercase shadow-md shrink-0 bg-indigo-600">
                       {activeRoom.loai_phong === "nhom" ? (
                         <Users size={16} />
@@ -769,7 +786,7 @@ const Messages = () => {
                     </div>
                   </div>
 
-                  <div className="flex gap-1 text-gray-400">
+                  <div className="flex shrink-0 gap-1 text-gray-400">
                     <button
                       type="button"
                       onClick={() => startCall("voice")}
@@ -795,7 +812,7 @@ const Messages = () => {
                   </div>
                 </div>
 
-                <div className="flex-1 overflow-y-auto p-6 space-y-4">
+                <div className="flex-1 space-y-3 overflow-y-auto p-3 sm:space-y-4 sm:p-6">
                   {messages.map((message) => {
                     const isMine =
                       Number(message.id_nguoi_gui) === Number(user?.id);
@@ -821,7 +838,7 @@ const Messages = () => {
                         )}
 
                         <div
-                          className={`max-w-[78%] p-3.5 rounded-2xl text-[13.5px] shadow-sm ${
+                          className={`max-w-[86%] rounded-2xl p-3 text-[13.5px] shadow-sm sm:max-w-[78%] sm:p-3.5 ${
                             isMine
                               ? "bg-blue-600 text-white rounded-tr-none"
                               : "bg-white text-slate-700 rounded-tl-none border border-gray-100"
@@ -856,7 +873,7 @@ const Messages = () => {
 
                 <form
                   onSubmit={handleSendTextMessage}
-                  className="p-4 bg-white border-t border-gray-100 flex items-center gap-2"
+                  className="flex items-center gap-1.5 border-t border-gray-100 bg-white p-2.5 sm:gap-2 sm:p-4"
                 >
                   <input
                     ref={fileInputRef}
@@ -870,7 +887,7 @@ const Messages = () => {
                     type="button"
                     onClick={() => fileInputRef.current?.click()}
                     disabled={sendingMedia}
-                    className="p-2.5 text-gray-400 hover:text-blue-600 transition-colors disabled:opacity-40"
+                    className="shrink-0 p-2 text-gray-400 transition-colors hover:text-blue-600 disabled:opacity-40 sm:p-2.5"
                   >
                     <ImageIcon size={20} />
                   </button>
@@ -879,7 +896,7 @@ const Messages = () => {
                     type="button"
                     onClick={handleToggleRecording}
                     disabled={sendingMedia}
-                    className={`p-2.5 transition-colors disabled:opacity-40 ${
+                    className={`shrink-0 p-2 transition-colors disabled:opacity-40 sm:p-2.5 ${
                       isRecording
                         ? "text-red-500"
                         : "text-gray-400 hover:text-blue-600"
@@ -893,7 +910,7 @@ const Messages = () => {
                     placeholder={
                       isRecording ? "Đang ghi âm..." : "Nhập tin nhắn..."
                     }
-                    className="flex-1 bg-gray-100 border-none rounded-2xl py-3 px-5 text-sm outline-none focus:ring-2 focus:ring-blue-100 transition-all"
+                    className="min-w-0 flex-1 rounded-2xl border-none bg-gray-100 px-4 py-3 text-sm outline-none transition-all focus:ring-2 focus:ring-blue-100 sm:px-5"
                     value={inputText}
                     onChange={(e) => setInputText(e.target.value)}
                     disabled={isRecording}
@@ -902,7 +919,7 @@ const Messages = () => {
                   <button
                     type="submit"
                     disabled={!inputText.trim()}
-                    className="bg-blue-600 text-white p-3 rounded-xl hover:bg-blue-700 shadow-lg shadow-blue-100 transition-all active:scale-90 disabled:opacity-40 disabled:cursor-not-allowed"
+                    className="shrink-0 rounded-xl bg-blue-600 p-3 text-white shadow-lg shadow-blue-100 transition-all hover:bg-blue-700 active:scale-90 disabled:cursor-not-allowed disabled:opacity-40"
                   >
                     <Send size={18} />
                   </button>

@@ -52,6 +52,24 @@ app.get('/api/health', (_req, res) => {
 app.use('/api', allRoutes)
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')))
 
+// Phục vụ giao diện Frontend React (nếu tồn tại thư mục public đã build)
+const fs = require('fs')
+const publicPath = path.join(__dirname, 'public')
+if (fs.existsSync(publicPath)) {
+  app.use(express.static(publicPath))
+  app.get(/.*/, (req, res, next) => {
+    if (req.path.startsWith('/api') || req.path.startsWith('/uploads') || req.path.startsWith('/socket.io')) {
+      return next()
+    }
+    const indexPath = path.join(publicPath, 'index.html')
+    if (fs.existsSync(indexPath)) {
+      res.sendFile(indexPath)
+    } else {
+      next()
+    }
+  })
+}
+
 io.on('connection', (socket) => {
   console.log('User connected:', socket.id)
 

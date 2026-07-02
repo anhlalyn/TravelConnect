@@ -56,6 +56,16 @@ const ensureMessageSchema = async () => {
       "ALTER TABLE tin_nhan MODIFY COLUMN loai_tin_nhan ENUM('text','image','audio','video_call_log') DEFAULT 'text'",
     );
   }
+
+  const [memberRows] = await db.query(
+    "SHOW COLUMNS FROM thanh_vien_phong_chat LIKE 'last_read_at'",
+  );
+
+  if (!memberRows.length) {
+    await db.query(
+      "ALTER TABLE thanh_vien_phong_chat ADD COLUMN last_read_at DATETIME NULL",
+    );
+  }
 };
 
 const checkRoomAccess = async (roomId, userId) => {
@@ -168,6 +178,7 @@ exports.getChatRooms = async (req, res) => {
   const userId = req.user.id;
 
   try {
+    await ensureMessageSchema();
     const [rooms] = await db.query(
       `
         SELECT
@@ -215,7 +226,17 @@ exports.getChatRooms = async (req, res) => {
           SELECT COUNT(*)
           FROM thanh_vien_phong_chat tv3
           WHERE tv3.id_phong = pc.id
-        ) AS so_thanh_vien
+        ) AS so_thanh_vien,
+        (
+          SELECT COUNT(*)
+          FROM tin_nhan unread_tn
+          WHERE unread_tn.id_phong = pc.id
+            AND unread_tn.id_nguoi_gui != ?
+            AND (
+              tv.last_read_at IS NULL
+              OR unread_tn.thoi_gian_gui > tv.last_read_at
+            )
+        ) AS unread_count
       FROM phong_chat pc
       JOIN thanh_vien_phong_chat tv ON pc.id = tv.id_phong
       WHERE tv.id_nguoi_dung = ?
@@ -230,7 +251,7 @@ exports.getChatRooms = async (req, res) => {
         pc.ngay_tao
       ) DESC
     `,
-      [userId, userId, userId, userId],
+      [userId, userId, userId, userId, userId],
     );
 
     res.json({ success: true, data: rooms });
@@ -244,6 +265,7 @@ exports.getMessagesByRoom = async (req, res) => {
   const userId = req.user.id;
 
   try {
+    await ensureMessageSchema();
     const hasAccess = await checkRoomAccess(roomId, userId);
     if (!hasAccess) {
       return res
@@ -264,6 +286,16 @@ exports.getMessagesByRoom = async (req, res) => {
       `,
       [roomId],
     );
+
+    await db.query(
+      `
+        UPDATE thanh_vien_phong_chat
+        SET last_read_at = NOW()
+        WHERE id_phong = ? AND id_nguoi_dung = ?
+      `,
+      [roomId, userId],
+    );
+    await emitRoomRefresh(roomId);
 
     res.json({ success: true, data: messages });
   } catch (err) {

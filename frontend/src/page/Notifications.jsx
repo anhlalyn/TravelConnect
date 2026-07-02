@@ -4,10 +4,11 @@ import Navbar from "../components/Navbar";
 import Sidebar from "../components/Sidebar";
 import { 
   Bell, Heart, MessageCircle, UserPlus, 
-  CheckCircle2, Clock, Trash2, Bookmark 
+  CheckCircle2, Clock 
 } from "lucide-react";
 import toast from "react-hot-toast";
 import { buildUploadUrl } from "../config";
+import { useNavigate } from "react-router-dom";
 
 const formatNotificationTimestamp = (value) => {
   if (!value) return "--";
@@ -30,6 +31,7 @@ const formatNotificationTimestamp = (value) => {
 const Notifications = ({ user }) => {
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
 
   const fetchNotifications = useCallback(async () => {
     try {
@@ -47,7 +49,7 @@ const Notifications = ({ user }) => {
       await api.put("/notifications/mark-read");
       toast.success("Đã đánh dấu tất cả là đã xem");
       fetchNotifications();
-    } catch (err) {
+    } catch {
       toast.error("Không thể cập nhật");
     }
   };
@@ -67,21 +69,27 @@ const Notifications = ({ user }) => {
     }
   };
 
+  const handleOpenNotification = (noti) => {
+    if (["thich", "binh_luan", "he_thong"].includes(noti.loai_thong_bao) && noti.id_lien_ket) {
+      navigate(`/post/${noti.id_lien_ket}`);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-[#F3F4F6]">
       <Navbar user={user} />
       
-      <div className="max-w-7xl mx-auto grid grid-cols-12 gap-6 pt-6 px-4 pb-20">
+      <div className="mx-auto grid max-w-7xl grid-cols-12 gap-4 px-3 pb-20 pt-4 sm:px-4 md:gap-6 md:pt-6">
         <div className="hidden lg:block col-span-3">
           <Sidebar user={user} />
         </div>
 
         <div className="col-span-12 lg:col-span-9">
-          <div className="bg-white rounded-[3rem] shadow-sm border border-gray-100 overflow-hidden">
+          <div className="overflow-hidden rounded-[1.75rem] border border-gray-100 bg-white shadow-sm sm:rounded-[3rem]">
             {/* Header thông báo */}
-            <div className="p-8 border-b border-gray-50 flex justify-between items-center bg-white sticky top-0 z-10">
+            <div className="sticky top-0 z-10 flex flex-col gap-4 border-b border-gray-50 bg-white p-4 sm:flex-row sm:items-center sm:justify-between sm:p-8">
               <div className="flex items-center gap-3">
-                <div className="p-3 bg-indigo-50 text-indigo-600 rounded-2xl">
+                <div className="rounded-2xl bg-indigo-50 p-3 text-indigo-600">
                     <Bell size={24} className="animate-swing" />
                 </div>
                 <div>
@@ -92,14 +100,14 @@ const Notifications = ({ user }) => {
               
               <button 
                 onClick={handleMarkAllRead}
-                className="flex items-center gap-2 px-5 py-2.5 bg-slate-900 text-white rounded-2xl text-[10px] font-black uppercase tracking-wider hover:bg-blue-600 transition-all shadow-lg active:scale-95"
+                className="flex w-full items-center justify-center gap-2 rounded-2xl bg-slate-900 px-5 py-3 text-[10px] font-black uppercase tracking-wider text-white shadow-lg transition-all hover:bg-blue-600 active:scale-95 sm:w-auto sm:py-2.5"
               >
                 <CheckCircle2 size={14} /> Đánh dấu đã đọc
               </button>
             </div>
 
             {/* Danh sách thông báo */}
-            <div className="p-4">
+            <div className="p-3 sm:p-4">
               {loading ? (
                 <div className="py-20 text-center font-black text-slate-300 italic animate-pulse">ĐANG TẢI...</div>
               ) : notifications.length > 0 ? (
@@ -107,7 +115,8 @@ const Notifications = ({ user }) => {
                   {notifications.map((noti) => (
                     <div 
                       key={noti.id} 
-                      className={`flex items-center gap-4 p-5 rounded-[2rem] transition-all cursor-pointer border-2 ${
+                      onClick={() => handleOpenNotification(noti)}
+                      className={`flex cursor-pointer items-start gap-3 rounded-[1.5rem] border-2 p-3 transition-all sm:items-center sm:gap-4 sm:rounded-[2rem] sm:p-5 ${
                         noti.da_xem 
                         ? 'bg-white border-transparent grayscale-[0.5] opacity-70' 
                         : 'bg-indigo-50/30 border-indigo-100 shadow-sm'
@@ -115,7 +124,7 @@ const Notifications = ({ user }) => {
                     >
                       {/* Avatar người gửi */}
                       <div className="relative shrink-0">
-                        <div className="w-14 h-14 rounded-2xl bg-blue-600 overflow-hidden border-4 border-white shadow-md">
+                        <div className="h-12 w-12 overflow-hidden rounded-2xl border-4 border-white bg-blue-600 shadow-md sm:h-14 sm:w-14">
                           {noti.anh_dai_dien ? (
                             <img src={buildUploadUrl(noti.anh_dai_dien)} className="w-full h-full object-cover" alt="user" />
                           ) : (
@@ -130,7 +139,7 @@ const Notifications = ({ user }) => {
                       </div>
 
                       {/* Nội dung thông báo */}
-                      <div className="flex-1">
+                      <div className="min-w-0 flex-1">
                         <p className="text-sm text-slate-700 leading-snug">
                           <span className="font-black text-slate-900">{noti.ten_nguoi_gui}</span>{" "}
                           <span className="font-medium">{noti.noi_dung}</span>
@@ -142,7 +151,7 @@ const Notifications = ({ user }) => {
 
                       {/* Chấm xanh nếu chưa xem */}
                       {!noti.da_xem && (
-                        <div className="w-3 h-3 bg-blue-600 rounded-full shadow-[0_0_10px_rgba(37,99,235,0.5)]"></div>
+                        <div className="mt-2 h-3 w-3 shrink-0 rounded-full bg-blue-600 shadow-[0_0_10px_rgba(37,99,235,0.5)] sm:mt-0"></div>
                       )}
                     </div>
                   ))}

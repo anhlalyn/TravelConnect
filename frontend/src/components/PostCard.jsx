@@ -12,6 +12,7 @@ import {
   Trash2,
   Edit3,
   Bookmark,
+  Flag,
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { useNavigate } from 'react-router-dom'
@@ -19,7 +20,8 @@ import { buildUploadUrl } from '../config'
 import PostMediaGallery from './PostMediaGallery'
 import { getTrustBadge } from '../utils/trustBadge'
 
-const PostCard = ({ post, onRefresh, currentUser }) => {
+const PostCard = ({ post: initialPost, onRefresh, currentUser }) => {
+  const [post, setPost] = useState(initialPost)
   const [showComments, setShowComments] = useState(false)
   const [showMenu, setShowMenu] = useState(false)
   const [isEditing, setIsEditing] = useState(false)
@@ -28,7 +30,7 @@ const PostCard = ({ post, onRefresh, currentUser }) => {
   const [text, setText] = useState('')
   const navigate = useNavigate()
 
-  const isOwner = currentUser?.id === post?.id_nguoi_dung
+  const isOwner = Number(currentUser?.id) === Number(post?.id_nguoi_dung)
   const displayName = post?.ten_nguoi_dang || post?.ten || 'Người dùng'
   const hasLocationTag = post?.id_kdl_gan_the && post?.ten_kdl_gan_the
   const trust = getTrustBadge(post?.diem_tin_cay)
@@ -44,8 +46,8 @@ const PostCard = ({ post, onRefresh, currentUser }) => {
   const handleSave = async () => {
     try {
       const res = await api.post('/posts/save', { id_bai_viet: post.id })
+      setPost((current) => ({ ...current, da_luu: Boolean(res.data.saved) }))
       toast.success(res.data.saved ? 'Đã lưu vào bộ sưu tập' : 'Đã bỏ lưu')
-      if (onRefresh) onRefresh()
     } catch {
       toast.error('Lỗi khi lưu bài viết')
     }
@@ -54,7 +56,20 @@ const PostCard = ({ post, onRefresh, currentUser }) => {
   const handleLike = async () => {
     try {
       const res = await api.post('/posts/like', { id_bai_viet: post.id })
-      if (res.data.success && onRefresh) onRefresh()
+      if (res.data.success) {
+        setPost((current) => {
+          const wasLiked = Boolean(current?.da_thich)
+          const liked = Boolean(res.data.liked)
+          const currentLikes = Number(current?.tong_luot_thich || 0)
+          const delta = liked && !wasLiked ? 1 : !liked && wasLiked ? -1 : 0
+
+          return {
+            ...current,
+            da_thich: liked,
+            tong_luot_thich: Math.max(0, currentLikes + delta),
+          }
+        })
+      }
     } catch {
       toast.error('Lỗi tương tác')
     }
@@ -79,7 +94,10 @@ const PostCard = ({ post, onRefresh, currentUser }) => {
       setText('')
       const res = await api.get(`/posts/${post.id}/comments`)
       setCommentList(res.data.data || [])
-      if (onRefresh) onRefresh()
+      setPost((current) => ({
+        ...current,
+        tong_binh_luan: Number(current?.tong_binh_luan || 0) + 1,
+      }))
       toast.success('Đã đăng bình luận')
     } catch {
       toast.error('Lỗi thêm bình luận')
@@ -100,6 +118,7 @@ const PostCard = ({ post, onRefresh, currentUser }) => {
   const handleUpdate = async () => {
     try {
       await api.put(`/posts/${post.id}`, { noi_dung: editContent, danh_muc: post?.danh_muc })
+      setPost((current) => ({ ...current, noi_dung: editContent }))
       setIsEditing(false)
       if (onRefresh) onRefresh()
       toast.success('Đã cập nhật')
@@ -110,6 +129,18 @@ const PostCard = ({ post, onRefresh, currentUser }) => {
 
   const handleBooking = () => {
     navigate(bookingPath)
+  }
+
+  const handleReport = async () => {
+    const reason = window.prompt('Nhập lý do báo cáo bài viết:', 'Nội dung không phù hợp.')
+    if (!reason?.trim()) return
+
+    try {
+      await api.post(`/posts/${post.id}/report`, { ly_do: reason.trim() })
+      toast.success('Đã gửi báo cáo cho quản trị viên')
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Không thể gửi báo cáo')
+    }
   }
 
   return (
@@ -180,6 +211,15 @@ const PostCard = ({ post, onRefresh, currentUser }) => {
                 </div>
               )}
             </div>
+          )}
+          {!isOwner && currentUser?.vai_tro !== 'admin' && (
+            <button
+              onClick={handleReport}
+              className="rounded-2xl p-2.5 text-slate-300 transition-all hover:bg-rose-50 hover:text-rose-500"
+              title="Báo cáo bài viết"
+            >
+              <Flag size={20} />
+            </button>
           )}
         </div>
       </div>

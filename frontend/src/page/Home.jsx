@@ -8,7 +8,6 @@ import Sidebar from "../components/Sidebar";
 import CreatePost from "../components/CreatePost";
 import PostCard from "../components/PostCard";
 import FriendSuggest from "../components/FriendSuggest";
-import toast from "react-hot-toast";
 
 const Home = () => {
   const [user, setUser] = useState(null);

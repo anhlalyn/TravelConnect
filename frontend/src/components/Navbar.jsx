@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { io } from "socket.io-client";
 import {
   Bell,
   Calendar,
@@ -14,17 +15,24 @@ import {
   Ticket,
   User,
   Wallet,
+  X,
 } from "lucide-react";
 import api from "../api";
-import { buildUploadUrl } from "../config";
+import { SOCKET_URL, buildUploadUrl } from "../config";
+import Sidebar from "./Sidebar";
 import { getTrustBadge } from "../utils/trustBadge";
 
 const Navbar = ({ user }) => {
   const navigate = useNavigate();
   const searchRef = useRef(null);
   const [showDropdown, setShowDropdown] = useState(false);
+  const [showMobileSidebar, setShowMobileSidebar] = useState(false);
   const [showNoti, setShowNoti] = useState(false);
   const [notifications, setNotifications] = useState([]);
+  const [unreadMessages, setUnreadMessages] = useState(0);
+  const [platformSettings, setPlatformSettings] = useState({
+    site_branding: { app_name: "TravelConnect", logo_url: "" },
+  });
   const [searchTerm, setSearchTerm] = useState("");
   const [showSearchResults, setShowSearchResults] = useState(false);
   const [searchLoading, setSearchLoading] = useState(false);
@@ -52,6 +60,64 @@ const Navbar = ({ user }) => {
       active = false;
     };
   }, [user]);
+
+  useEffect(() => {
+    let active = true;
+
+    const loadPlatformSettings = async () => {
+      try {
+        const res = await api.get("/platform/settings");
+        if (active && res.data.success) {
+          setPlatformSettings(res.data.data || {});
+        }
+      } catch (err) {
+        if (active) console.error("Khong the tai cau hinh nen tang:", err);
+      }
+    };
+
+    loadPlatformSettings();
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!user?.id) return undefined;
+
+    let active = true;
+
+    const loadUnreadMessages = async () => {
+      try {
+        const res = await api.get("/messages/rooms");
+        if (!active) return;
+
+        const total = (res.data.data || []).reduce(
+          (sum, room) => sum + Number(room.unread_count || 0),
+          0,
+        );
+        setUnreadMessages(total);
+      } catch (err) {
+        if (active) console.error("Lỗi tải số tin nhắn:", err);
+      }
+    };
+
+    loadUnreadMessages();
+
+    const socket = io(SOCKET_URL);
+    socket.emit("join-room", `user_${user.id}`);
+    socket.on("rooms:refresh", loadUnreadMessages);
+
+    const handleFocus = () => loadUnreadMessages();
+    window.addEventListener("focus", handleFocus);
+
+    return () => {
+      active = false;
+      window.removeEventListener("focus", handleFocus);
+      socket.off("rooms:refresh", loadUnreadMessages);
+      socket.disconnect();
+    };
+  }, [user?.id]);
 
   useEffect(() => {
     if (!user) return;
@@ -114,6 +180,8 @@ const Navbar = ({ user }) => {
   const trustBadge = getTrustBadge(user?.diem_tin_cay);
   const totalSearchResults =
     (searchResults.users?.length || 0) + (searchResults.posts?.length || 0);
+  const appName = platformSettings.site_branding?.app_name || "TravelConnect";
+  const logoUrl = platformSettings.site_branding?.logo_url || "";
   const roleLabel =
     user?.vai_tro === "admin"
       ? "Quản trị hệ thống"
@@ -127,13 +195,42 @@ const Navbar = ({ user }) => {
         <div className="flex flex-1 items-center gap-4">
           <div
             className="group flex shrink-0 cursor-pointer items-center gap-2"
-            onClick={() => navigate("/home")}
+            onClick={() => {
+              if (window.innerWidth < 1024) {
+                setShowMobileSidebar(true);
+                setShowDropdown(false);
+                setShowNoti(false);
+                return;
+              }
+
+              navigate("/home");
+            }}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => {
+              if (e.key !== "Enter" && e.key !== " ") return;
+              e.preventDefault();
+
+              if (window.innerWidth < 1024) {
+                setShowMobileSidebar(true);
+                setShowDropdown(false);
+                setShowNoti(false);
+                return;
+              }
+
+              navigate("/home");
+            }}
+            aria-label="Mo menu hoac ve trang chu"
           >
-            <div className="rounded-xl bg-blue-600 p-2 text-white shadow-lg shadow-blue-100 transition-transform group-hover:rotate-12">
-              <Navigation size={22} fill="currentColor" />
+            <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-xl bg-blue-600 text-white shadow-lg shadow-blue-100 transition-transform group-hover:rotate-12">
+              {logoUrl ? (
+                <img src={logoUrl} alt={appName} className="h-full w-full object-cover" />
+              ) : (
+                <Navigation size={22} fill="currentColor" />
+              )}
             </div>
             <span className="hidden text-xl font-black italic tracking-tighter text-blue-600 lg:block">
-              TravelConnect
+              {appName}
             </span>
           </div>
 
@@ -271,40 +368,46 @@ const Navbar = ({ user }) => {
         </div>
 
         <div className="flex flex-1 items-center justify-center gap-2 md:gap-8">
-          <button
-            onClick={() => navigate("/home")}
-            className="group relative rounded-2xl p-3 text-gray-500 transition-all hover:bg-blue-50 hover:text-blue-600"
-          >
-            <Home size={26} />
-          </button>
+          {user?.vai_tro !== "admin" && (
+            <>
+              <button
+                onClick={() => navigate("/home")}
+                className="group relative rounded-2xl p-3 text-gray-500 transition-all hover:bg-blue-50 hover:text-blue-600"
+              >
+                <Home size={26} />
+              </button>
 
-          <button
-            onClick={() => navigate("/messages")}
-            className="group relative rounded-2xl p-3 text-gray-500 transition-all hover:bg-blue-50 hover:text-blue-600"
-          >
-            <MessageSquare size={26} />
-            <span className="absolute right-2 top-2 h-2 w-2 rounded-full border-2 border-white bg-red-500" />
-          </button>
+              <button
+                onClick={() => navigate("/messages")}
+                className="group relative rounded-2xl p-3 text-gray-500 transition-all hover:bg-blue-50 hover:text-blue-600"
+              >
+                <MessageSquare size={26} />
+                {unreadMessages > 0 && (
+                  <span className="absolute right-1 top-1 flex h-5 min-w-5 items-center justify-center rounded-full border-2 border-white bg-red-500 px-1 text-[10px] font-black leading-none text-white">
+                    {unreadMessages > 99 ? "99+" : unreadMessages}
+                  </span>
+                )}
+              </button>
 
-          <div className="relative">
-            <button
-              onClick={() => {
-                setShowNoti(!showNoti);
-                setShowDropdown(false);
-              }}
-              className={`relative rounded-2xl p-3 transition-all ${
-                showNoti
-                  ? "bg-blue-50 text-blue-600"
-                  : "text-gray-500 hover:bg-gray-50"
-              }`}
-            >
-              <Bell size={26} />
-              {unreadCount > 0 && (
-                <span className="absolute right-2.5 top-2 flex h-4 w-4 animate-bounce items-center justify-center rounded-full border-2 border-white bg-orange-500 text-[10px] font-bold text-white">
-                  {unreadCount}
-                </span>
-              )}
-            </button>
+              <div className="relative">
+                <button
+                  onClick={() => {
+                    setShowNoti(!showNoti);
+                    setShowDropdown(false);
+                  }}
+                  className={`relative rounded-2xl p-3 transition-all ${
+                    showNoti
+                      ? "bg-blue-50 text-blue-600"
+                      : "text-gray-500 hover:bg-gray-50"
+                  }`}
+                >
+                  <Bell size={26} />
+                  {unreadCount > 0 && (
+                    <span className="absolute right-2.5 top-2 flex h-4 w-4 animate-bounce items-center justify-center rounded-full border-2 border-white bg-orange-500 text-[10px] font-bold text-white">
+                      {unreadCount}
+                    </span>
+                  )}
+                </button>
 
             {showNoti && (
               <>
@@ -312,7 +415,7 @@ const Navbar = ({ user }) => {
                   className="fixed inset-0 z-10"
                   onClick={() => setShowNoti(false)}
                 />
-                <div className="absolute left-1/2 z-20 mt-4 w-80 -translate-x-1/2 overflow-hidden rounded-[2.5rem] border border-gray-100 bg-white py-4 shadow-2xl md:w-96">
+                <div className="fixed inset-x-3 top-20 z-20 max-h-[calc(100vh-6rem)] overflow-hidden rounded-[1.75rem] border border-gray-100 bg-white py-3 shadow-2xl sm:absolute sm:left-1/2 sm:right-auto sm:inset-x-auto sm:mt-4 sm:w-80 sm:-translate-x-1/2 sm:rounded-[2.5rem] sm:py-4 md:w-96">
                   <div className="mb-2 flex items-center justify-between border-b border-gray-50 px-6 py-2">
                     <h3 className="text-[11px] font-black uppercase tracking-widest italic text-slate-800">
                       Thông báo
@@ -390,7 +493,9 @@ const Navbar = ({ user }) => {
                 </div>
               </>
             )}
-          </div>
+              </div>
+            </>
+          )}
         </div>
 
         <div className="flex flex-1 items-center justify-end">
@@ -476,6 +581,8 @@ const Navbar = ({ user }) => {
                     >
                       <User size={18} /> Hồ sơ
                     </button>
+                    {user?.vai_tro !== "admin" && (
+                      <>
                     <button
                       onClick={() => {
                         navigate("/my-bookings");
@@ -494,6 +601,8 @@ const Navbar = ({ user }) => {
                     >
                       <Wallet size={18} /> Rút tiền
                     </button>
+                      </>
+                    )}
                     {user?.vai_tro === "khu_du_lich" && (
                       <button
                         onClick={() => {
@@ -532,6 +641,44 @@ const Navbar = ({ user }) => {
           </div>
         </div>
       </div>
+
+      {showMobileSidebar && (
+        <div className="fixed inset-0 z-50 lg:hidden">
+          <div
+            className="absolute inset-0 bg-slate-900/45 backdrop-blur-sm"
+            onClick={() => setShowMobileSidebar(false)}
+            aria-hidden="true"
+          />
+
+          <aside className="absolute left-0 top-0 h-full w-[86vw] max-w-[340px] overflow-y-auto bg-[#F3F4F6] p-4 shadow-2xl">
+            <div className="mb-4 flex items-center justify-between rounded-[1.5rem] bg-white p-3 shadow-sm">
+              <div className="flex items-center gap-2">
+                <div className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-xl bg-blue-600 text-white">
+                  {logoUrl ? (
+                    <img src={logoUrl} alt={appName} className="h-full w-full object-cover" />
+                  ) : (
+                    <Navigation size={18} fill="currentColor" />
+                  )}
+                </div>
+                <span className="text-sm font-black italic text-blue-600">
+                  {appName}
+                </span>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setShowMobileSidebar(false)}
+                className="rounded-xl bg-slate-100 p-2 text-slate-500 transition-colors hover:bg-slate-900 hover:text-white"
+                aria-label="Dong menu"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <Sidebar user={user} onNavigate={() => setShowMobileSidebar(false)} />
+          </aside>
+        </div>
+      )}
     </nav>
   );
 };

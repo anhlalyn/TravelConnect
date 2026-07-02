@@ -772,11 +772,9 @@ UNLOCK TABLES;
 -- Extra schema from repo migrations
 -- Source: backend/migrations/2026-04-24_explore_profile_extensions.sql
 -- ============================================
-
 ALTER TABLE `nguoi_dung`
-ADD COLUMN IF NOT EXISTS `so_thich_json` JSON NULL;
+ADD COLUMN `so_thich_json` JSON NULL;
 
 ALTER TABLE `bai_viet`
-ADD COLUMN IF NOT EXISTS `danh_muc` VARCHAR(100) NULL DEFAULT 'Tổng hợp';
-
+ADD COLUMN `danh_muc` VARCHAR(100) NULL DEFAULT 'Tổng hợp';
 -- Dump completed on 2026-05-01 16:33:34

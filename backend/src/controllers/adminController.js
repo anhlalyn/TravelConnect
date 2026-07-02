@@ -1,6 +1,7 @@
 const db = require("../config/db");
 const {
   ensurePlatformColumns,
+  ensurePostReportTable,
   getPlatformSetting,
   setPlatformSetting,
   getPostCategories,
@@ -18,6 +19,7 @@ const buildCategorySlug = (value) =>
 exports.getOverview = async (_req, res) => {
   try {
     await ensurePlatformColumns();
+    await ensurePostReportTable();
     const [
       [userSummaryRows],
       [postSummaryRows],
@@ -87,6 +89,14 @@ exports.getOverview = async (_req, res) => {
         SUM(CASE WHEN trang_thai_duyet = 'rejected' THEN 1 ELSE 0 END) AS rejected_businesses
       FROM ho_so_khu_du_lich
     `);
+    const [postReportRows] = await db.query(`
+      SELECT
+        COUNT(*) AS total_reports,
+        SUM(CASE WHEN trang_thai = 'pending' THEN 1 ELSE 0 END) AS pending_reports,
+        SUM(CASE WHEN trang_thai = 'reviewed' THEN 1 ELSE 0 END) AS reviewed_reports,
+        SUM(CASE WHEN trang_thai = 'dismissed' THEN 1 ELSE 0 END) AS dismissed_reports
+      FROM bao_cao_bai_viet
+    `);
 
     res.json({
       success: true,
@@ -123,6 +133,12 @@ exports.getOverview = async (_req, res) => {
         notifications: {
           total: parseNumber(notificationSummaryRows[0]?.total_notifications),
           unread: parseNumber(notificationSummaryRows[0]?.unread_notifications),
+        },
+        postReports: {
+          total: parseNumber(postReportRows[0]?.total_reports),
+          pending: parseNumber(postReportRows[0]?.pending_reports),
+          reviewed: parseNumber(postReportRows[0]?.reviewed_reports),
+          dismissed: parseNumber(postReportRows[0]?.dismissed_reports),
         },
         recentUsers,
         recentPosts,
@@ -294,6 +310,154 @@ exports.getPayments = async (req, res) => {
   }
 };
 
+exports.getPosts = async (req, res) => {
+  const role = req.query.role;
+
+  try {
+    await ensurePlatformColumns();
+    const params = [];
+    let whereClause = "";
+
+    if (role) {
+      whereClause = "WHERE nd.vai_tro = ?";
+      params.push(role);
+    }
+
+    const [rows] = await db.query(
+      `
+        SELECT
+          bv.id,
+          bv.tieu_de,
+          bv.noi_dung,
+          bv.danh_muc,
+          bv.ngay_tao,
+          bv.id_nguoi_dung,
+          nd.ten AS author_name,
+          nd.email AS author_email,
+          nd.vai_tro AS author_role,
+          COUNT(DISTINCT lt.id) AS total_likes,
+          COUNT(DISTINCT bl.id) AS total_comments
+        FROM bai_viet bv
+        JOIN nguoi_dung nd ON nd.id = bv.id_nguoi_dung
+        LEFT JOIN luot_thich lt ON lt.id_bai_viet = bv.id
+        LEFT JOIN binh_luan bl ON bl.id_bai_viet = bv.id
+        ${whereClause}
+        GROUP BY bv.id
+        ORDER BY bv.ngay_tao DESC
+        LIMIT 200
+      `,
+      params,
+    );
+
+    res.json({ success: true, data: rows });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+};
+
+exports.deletePost = async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const [result] = await db.query("DELETE FROM bai_viet WHERE id = ?", [id]);
+
+    if (!result.affectedRows) {
+      return res.status(404).json({
+        success: false,
+        message: "Khong tim thay bai viet.",
+      });
+    }
+
+    res.json({ success: true, message: "Da xoa bai viet." });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+};
+
+exports.getPostReports = async (req, res) => {
+  const status = req.query.status;
+
+  try {
+    await ensurePostReportTable();
+    const params = [];
+    let whereClause = "";
+
+    if (status) {
+      whereClause = "WHERE bc.trang_thai = ?";
+      params.push(status);
+    }
+
+    const [rows] = await db.query(
+      `
+        SELECT
+          bc.id,
+          bc.id_bai_viet,
+          bc.ly_do,
+          bc.trang_thai,
+          bc.ghi_chu_admin,
+          bc.ngay_tao,
+          bc.ngay_xu_ly,
+          bv.tieu_de,
+          bv.noi_dung,
+          author.id AS author_id,
+          author.ten AS author_name,
+          author.email AS author_email,
+          reporter.ten AS reporter_name,
+          reporter.email AS reporter_email
+        FROM bao_cao_bai_viet bc
+        JOIN bai_viet bv ON bv.id = bc.id_bai_viet
+        JOIN nguoi_dung author ON author.id = bv.id_nguoi_dung
+        JOIN nguoi_dung reporter ON reporter.id = bc.id_nguoi_bao_cao
+        ${whereClause}
+        ORDER BY
+          CASE bc.trang_thai WHEN 'pending' THEN 0 WHEN 'reviewed' THEN 1 ELSE 2 END,
+          bc.ngay_tao DESC
+        LIMIT 200
+      `,
+      params,
+    );
+
+    res.json({ success: true, data: rows });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+};
+
+exports.updatePostReportStatus = async (req, res) => {
+  const { id } = req.params;
+  const { trang_thai, ghi_chu_admin } = req.body;
+
+  if (!["pending", "reviewed", "dismissed"].includes(trang_thai)) {
+    return res.status(400).json({
+      success: false,
+      message: "Trang thai bao cao khong hop le.",
+    });
+  }
+
+  try {
+    await ensurePostReportTable();
+    const [result] = await db.query(
+      `
+        UPDATE bao_cao_bai_viet
+        SET trang_thai = ?, ghi_chu_admin = ?, ngay_xu_ly = NOW()
+        WHERE id = ?
+      `,
+      [trang_thai, ghi_chu_admin || null, id],
+    );
+
+    if (!result.affectedRows) {
+      return res.status(404).json({
+        success: false,
+        message: "Khong tim thay bao cao.",
+      });
+    }
+
+    res.json({ success: true, message: "Da cap nhat bao cao." });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+};
+
 exports.reviewBusiness = async (req, res) => {
   const { id } = req.params;
   const { trang_thai_duyet, ghi_chu_duyet } = req.body;
@@ -404,11 +568,27 @@ exports.getPlatformSettings = async (_req, res) => {
   try {
     await ensurePlatformColumns();
     const commissionConfig = await getPlatformSetting("referral_commission_rate", { value: 0.1 });
+    const siteBranding = await getPlatformSetting("site_branding", {
+      app_name: "TravelConnect",
+      logo_url: "",
+    });
+    const supportContent = await getPlatformSetting("support_content", {
+      title: "Can ho tro?",
+      message: "Lien he tong dai TravelConnect 24/7",
+    });
 
     res.json({
       success: true,
       data: {
         referral_commission_rate: Number(commissionConfig?.value || 0.1),
+        site_branding: {
+          app_name: siteBranding?.app_name || "TravelConnect",
+          logo_url: siteBranding?.logo_url || "",
+        },
+        support_content: {
+          title: supportContent?.title || "Can ho tro?",
+          message: supportContent?.message || "Lien he tong dai TravelConnect 24/7",
+        },
       },
     });
   } catch (err) {
@@ -420,6 +600,8 @@ exports.updatePlatformSettings = async (req, res) => {
   try {
     await ensurePlatformColumns();
     const commissionRate = Number(req.body.referral_commission_rate);
+    const siteBranding = req.body.site_branding || {};
+    const supportContent = req.body.support_content || {};
 
     if (Number.isNaN(commissionRate) || commissionRate < 0 || commissionRate > 1) {
       return res.status(400).json({
@@ -429,6 +611,14 @@ exports.updatePlatformSettings = async (req, res) => {
     }
 
     await setPlatformSetting("referral_commission_rate", { value: commissionRate });
+    await setPlatformSetting("site_branding", {
+      app_name: String(siteBranding.app_name || "TravelConnect").trim() || "TravelConnect",
+      logo_url: String(siteBranding.logo_url || "").trim(),
+    });
+    await setPlatformSetting("support_content", {
+      title: String(supportContent.title || "Can ho tro?").trim() || "Can ho tro?",
+      message: String(supportContent.message || "Lien he tong dai TravelConnect 24/7").trim() || "Lien he tong dai TravelConnect 24/7",
+    });
 
     res.json({
       success: true,

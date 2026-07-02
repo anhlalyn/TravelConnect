@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { ArrowRight, Lock, Mail, Navigation, Sparkles } from "lucide-react";
+import { ArrowRight, Eye, EyeOff, Lock, Mail, Navigation, Sparkles } from "lucide-react";
 import toast from "react-hot-toast";
 import api from "../api";
 import { saveVerifyOtpContext } from "../utils/authFlowStorage";
@@ -8,6 +8,7 @@ import { saveVerifyOtpContext } from "../utils/authFlowStorage";
 const Login = ({ setUser }) => {
   const [account, setAccount] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
   const [statusMessage, setStatusMessage] = useState("");
@@ -164,10 +165,10 @@ const Login = ({ setUser }) => {
                   size={20}
                 />
                 <input
-                  type="password"
+                  type={showPassword ? "text" : "password"}
                   placeholder="••••••••"
                   value={password}
-                  className={`w-full rounded-[1.5rem] border-2 bg-slate-50 py-4 pl-12 pr-4 font-bold text-slate-700 shadow-inner outline-none transition-all focus:bg-white ${
+                  className={`w-full rounded-[1.5rem] border-2 bg-slate-50 py-4 pl-12 pr-14 font-bold text-slate-700 shadow-inner outline-none transition-all focus:bg-white ${
                     errors.password
                       ? "border-red-200 focus:border-red-300"
                       : "border-transparent focus:border-indigo-100"
@@ -178,6 +179,14 @@ const Login = ({ setUser }) => {
                     setErrors((prev) => ({ ...prev, password: "" }));
                   }}
                 />
+                <button
+                  type="button"
+                  aria-label={showPassword ? "An mat khau" : "Hien mat khau"}
+                  onClick={() => setShowPassword((prev) => !prev)}
+                  className="absolute right-4 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full text-slate-400 transition-colors hover:bg-indigo-50 hover:text-indigo-600 focus:outline-none focus:ring-2 focus:ring-indigo-100"
+                >
+                  {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                </button>
               </div>
               {errors.password && <p className="px-4 text-xs font-bold text-red-500">{errors.password}</p>}
             </div>
