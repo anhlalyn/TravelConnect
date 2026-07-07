@@ -183,6 +183,35 @@ const Messages = () => {
     initializeData();
   }, [fetchCurrentUser, fetchFriends, fetchRooms, openRoom, searchParams]);
 
+  const initializeWebRTC = useCallback(async (targetUserRoom) => {
+    const configuration = {
+      iceServers: [
+        { urls: "stun:stun.l.google.com:19302" },
+        { urls: "stun:stun1.l.google.com:19302" },
+      ],
+    };
+
+    peerConnectionRef.current = new RTCPeerConnection(configuration);
+
+    peerConnectionRef.current.onicecandidate = (event) => {
+      if (event.candidate && socketRef.current && targetUserRoom) {
+        socketRef.current.emit("ice-candidate", {
+          to: targetUserRoom,
+          candidate: event.candidate,
+        });
+      }
+    };
+
+    peerConnectionRef.current.ontrack = (event) => {
+      setRemoteStream(event.streams[0]);
+      if (remoteVideoRef.current) {
+        remoteVideoRef.current.srcObject = event.streams[0];
+      }
+    };
+
+    return peerConnectionRef.current;
+  }, []);
+
   useEffect(() => {
     if (!socketRef.current) return;
 
@@ -206,34 +235,7 @@ const Messages = () => {
       }
     };
 
-    const initializeWebRTC = async (targetUserRoom) => {
-      const configuration = {
-        iceServers: [
-          { urls: "stun:stun.l.google.com:19302" },
-          { urls: "stun:stun1.l.google.com:19302" },
-        ],
-      };
 
-      peerConnectionRef.current = new RTCPeerConnection(configuration);
-
-      peerConnectionRef.current.onicecandidate = (event) => {
-        if (event.candidate && socketRef.current && targetUserRoom) {
-          socketRef.current.emit("ice-candidate", {
-            to: targetUserRoom,
-            candidate: event.candidate,
-          });
-        }
-      };
-
-      peerConnectionRef.current.ontrack = (event) => {
-        setRemoteStream(event.streams[0]);
-        if (remoteVideoRef.current) {
-          remoteVideoRef.current.srcObject = event.streams[0];
-        }
-      };
-
-      return peerConnectionRef.current;
-    };
 
     socket.on("message:new", handleNewMessage);
     socket.on("rooms:refresh", handleRoomsRefresh);
@@ -337,7 +339,7 @@ const Messages = () => {
       socket.off("ice-candidate");
       socket.off("call-ended");
     };
-  }, [activeRoom, fetchRooms, localStream, remoteStream]);
+  }, [activeRoom, fetchRooms, initializeWebRTC, localStream, remoteStream]);
 
   useEffect(() => {
     if (!socketRef.current || !activeRoomId) return undefined;
