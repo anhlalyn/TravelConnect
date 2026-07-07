@@ -73,6 +73,7 @@ const Messages = () => {
   const localVideoRef = useRef(null);
   const remoteVideoRef = useRef(null);
   const peerConnectionRef = useRef(null);
+  const queuedCandidatesRef = useRef([]);
   const fileInputRef = useRef(null);
 
   const activeRoom = useMemo(
@@ -212,6 +213,20 @@ const Messages = () => {
     return peerConnectionRef.current;
   }, []);
 
+  const processQueuedCandidates = useCallback(async () => {
+    const pc = peerConnectionRef.current;
+    if (pc && pc.remoteDescription && pc.remoteDescription.type) {
+      while (queuedCandidatesRef.current.length > 0) {
+        const candidate = queuedCandidatesRef.current.shift();
+        try {
+          await pc.addIceCandidate(new RTCIceCandidate(candidate));
+        } catch (err) {
+          console.error("Error adding queued ICE candidate:", err);
+        }
+      }
+    }
+  }, []);
+
   useEffect(() => {
     if (!socketRef.current) return;
 
@@ -255,6 +270,7 @@ const Messages = () => {
         await peerConnection.setRemoteDescription(
           new RTCSessionDescription(data.offer),
         );
+        await processQueuedCandidates();
 
         const stream = await navigator.mediaDevices.getUserMedia({
           audio: true,
@@ -292,6 +308,7 @@ const Messages = () => {
           await peerConnectionRef.current.setRemoteDescription(
             new RTCSessionDescription(data.answer),
           );
+          await processQueuedCandidates();
           toast.success("Cuộc gọi đã được kết nối");
         }
       } catch (err) {
@@ -301,10 +318,11 @@ const Messages = () => {
 
     socket.on("ice-candidate", async (data) => {
       try {
-        if (peerConnectionRef.current) {
-          await peerConnectionRef.current.addIceCandidate(
-            new RTCIceCandidate(data.candidate),
-          );
+        const pc = peerConnectionRef.current;
+        if (pc && pc.remoteDescription && pc.remoteDescription.type) {
+          await pc.addIceCandidate(new RTCIceCandidate(data.candidate));
+        } else {
+          queuedCandidatesRef.current.push(data.candidate);
         }
       } catch (err) {
         console.error(err);
@@ -320,7 +338,9 @@ const Messages = () => {
       }
       if (peerConnectionRef.current) {
         peerConnectionRef.current.close();
+        peerConnectionRef.current = null;
       }
+      queuedCandidatesRef.current = [];
 
       setIsInCall(false);
       setCallType(null);
@@ -339,7 +359,7 @@ const Messages = () => {
       socket.off("ice-candidate");
       socket.off("call-ended");
     };
-  }, [activeRoom, fetchRooms, initializeWebRTC, localStream, remoteStream]);
+  }, [activeRoom, fetchRooms, initializeWebRTC, processQueuedCandidates, localStream, remoteStream]);
 
   useEffect(() => {
     if (!socketRef.current || !activeRoomId) return undefined;
@@ -550,7 +570,9 @@ const Messages = () => {
     }
     if (peerConnectionRef.current) {
       peerConnectionRef.current.close();
+      peerConnectionRef.current = null;
     }
+    queuedCandidatesRef.current = [];
     if (socketRef.current && activeRoom?.id_doi_phuong) {
       socketRef.current.emit("end-call", {
         to: `user_${activeRoom.id_doi_phuong}`,
