@@ -114,6 +114,18 @@ const Messages = () => {
     activeRoomIdRef.current = activeRoomId;
   }, [activeRoomId]);
 
+  useEffect(() => {
+    if (isInCall) {
+      if (localVideoRef.current && localStream) {
+        localVideoRef.current.srcObject = localStream;
+      }
+      if (remoteVideoRef.current && remoteStream) {
+        remoteVideoRef.current.srcObject = remoteStream;
+      }
+    }
+  }, [isInCall, localStream, remoteStream]);
+
+
   const handleStartChatWithFriend = useCallback(
     async (friendId) => {
       try {

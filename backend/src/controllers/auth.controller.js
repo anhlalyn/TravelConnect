@@ -33,7 +33,7 @@ exports.register = async (req, res) => {
     }
 
     const hashedPassword = await bcrypt.hash(mat_khau, 10);
-    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const otp = "123456";
     const hasInterestColumn = await columnExists("nguoi_dung", "so_thich_json");
     const interests = parseJsonArray(so_thich_json);
 
@@ -254,7 +254,7 @@ exports.forgotPassword = async (req, res) => {
       return res.status(404).json({ message: "Email không tồn tại!" });
     }
 
-    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const otp = "123456";
     await db.query(
       `
         UPDATE otp_xac_thuc

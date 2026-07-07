@@ -65,6 +65,14 @@ const LiveStream = ({ user }) => {
     watchingStreamRef.current = watchingStream;
   }, [watchingStream]);
 
+  useEffect(() => {
+    if ((cameraReady || hostingStreamId) && localVideoRef.current && localStreamRef.current) {
+      localVideoRef.current.srcObject = localStreamRef.current;
+      localVideoRef.current.play().catch(() => {});
+    }
+  }, [cameraReady, hostingStreamId]);
+
+
   const attachLocalPreview = (stream) => {
     if (localVideoRef.current) {
       localVideoRef.current.srcObject = stream;
