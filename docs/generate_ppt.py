@@ -135,7 +135,7 @@ def create_presentation():
     txBox = slide1.shapes.add_textbox(Inches(1.0), Inches(2.2), Inches(11.333), Inches(0.6))
     tf = txBox.text_frame
     p = tf.paragraphs[0]
-    p.text = "BÁO CÁO CHUYÊN ĐỀ PHÁT TRIỂN HỆ THỐNG"
+    p.text = "MÔN: CHUYÊN ĐỀ 1"
     p.font.size = Pt(18)
     p.font.bold = True
     p.font.color.rgb = COLOR_ACCENT
@@ -156,12 +156,22 @@ def create_presentation():
     infoBox = slide1.shapes.add_textbox(Inches(1.0), Inches(5.0), Inches(8.0), Inches(2.0))
     tf = infoBox.text_frame
     
-    p = tf.paragraphs[0]
+    p_gv = tf.paragraphs[0]
+    p_gv.text = "Giảng viên hướng dẫn: "
+    p_gv.font.size = Pt(16)
+    p_gv.font.color.rgb = COLOR_WHITE
+    run_gv = p_gv.add_run()
+    run_gv.text = "Huỳnh Anh Tuấn"
+    run_gv.font.bold = True
+    run_gv.font.color.rgb = COLOR_ACCENT
+    p_gv.space_after = Pt(8)
+
+    p = tf.add_paragraph()
     p.text = "Sinh viên thực hiện: "
     p.font.size = Pt(16)
     p.font.color.rgb = COLOR_WHITE
     run = p.add_run()
-    run.text = "Phan Định Luyện"
+    run.text = "Phan Đình Luyến"
     run.font.bold = True
     run.font.color.rgb = COLOR_ACCENT
     p.space_after = Pt(8)
@@ -336,42 +346,11 @@ def create_presentation():
     )
 
     # ----------------------------------------------------
-    # SLIDE 6: Thiết kế Database (Database Design with ERD)
-    # ----------------------------------------------------
-    slide6 = prs.slides.add_slide(blank_slide_layout)
-    set_slide_background(slide6, COLOR_LIGHT_BG)
-    add_slide_header(slide6, "5. Thiết Kế Cơ Sở Dữ Liệu & ERD")
-
-    # Left: Database description card
-    add_card(
-        slide6,
-        Inches(1.0), Inches(2.0), Inches(4.8), Inches(4.5),
-        "Thực thể chính & Quan hệ",
-        [
-            "nguoi_dung: Quản lý tài khoản khách hàng, khu du lịch, admin.",
-            "bai_viet, binh_luan: Lưu thông tin mạng xã hội.",
-            "dat_ve, ve_dich_vu: Quản lý booking vé.",
-            "tin_nhan, phong_chat: Nhắn tin realtime.",
-            "Ràng buộc khóa ngoại đảm bảo tính toàn vẹn.",
-            "Tối ưu hóa các truy vấn JOIN lấy dữ liệu."
-        ]
-    )
-
-    # Right: ERD image card background
-    erd_card = slide6.shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE, Inches(6.3), Inches(2.0), Inches(6.033), Inches(4.5))
-    erd_card.fill.solid()
-    erd_card.fill.fore_color.rgb = COLOR_CARD_BG
-    erd_card.line.color.rgb = COLOR_BORDER
-
-    # Load and insert ERD diagram
-    try_add_picture(slide6, IMG_ERD, Inches(6.4), Inches(2.1), width=Inches(5.833), height=Inches(4.3))
-
-    # ----------------------------------------------------
-    # SLIDE 7: Điểm sáng kỹ thuật (Technical Highlights)
+    # SLIDE 6: Điểm sáng kỹ thuật (Technical Highlights)
     # ----------------------------------------------------
     slide7 = prs.slides.add_slide(blank_slide_layout)
     set_slide_background(slide7, COLOR_LIGHT_BG)
-    add_slide_header(slide7, "6. Điểm Sáng Kỹ Thuật & Tối Ưu Hóa")
+    add_slide_header(slide7, "5. Điểm Sáng Kỹ Thuật & Tối Ưu Hóa")
 
     add_card(
         slide7,
@@ -397,11 +376,11 @@ def create_presentation():
     )
 
     # ----------------------------------------------------
-    # SLIDE 8: Demo Giao Diện (UI Mockups with Real screenshots)
+    # SLIDE 7: Demo Giao Diện (UI Mockups with Real screenshots)
     # ----------------------------------------------------
     slide8 = prs.slides.add_slide(blank_slide_layout)
     set_slide_background(slide8, COLOR_LIGHT_BG)
-    add_slide_header(slide8, "7. Demo Giao Diện Thực Tế")
+    add_slide_header(slide8, "6. Demo Giao Diện Thực Tế")
 
     # Left: Homepage Screenshot
     card_left = slide8.shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE, Inches(1.0), Inches(1.7), Inches(5.2), Inches(5.0))
@@ -458,11 +437,11 @@ def create_presentation():
     p_hr_desc.font.name = "Arial"
 
     # ----------------------------------------------------
-    # SLIDE 9: Đánh giá & Hướng phát triển (Evaluation)
+    # SLIDE 8: Đánh giá & Hướng phát triển (Evaluation)
     # ----------------------------------------------------
     slide9 = prs.slides.add_slide(blank_slide_layout)
     set_slide_background(slide9, COLOR_LIGHT_BG)
-    add_slide_header(slide9, "8. Kết Quả & Hướng Phát Triển")
+    add_slide_header(slide9, "7. Kết Quả & Hướng Phát Triển")
 
     add_card(
         slide9,
