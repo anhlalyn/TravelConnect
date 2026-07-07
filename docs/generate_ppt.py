@@ -346,34 +346,35 @@ def create_presentation():
     )
 
     # ----------------------------------------------------
-    # SLIDE 6: Điểm sáng kỹ thuật (Technical Highlights)
+    # SLIDE 6: Thiết kế Database (Database Design with ERD)
     # ----------------------------------------------------
-    slide7 = prs.slides.add_slide(blank_slide_layout)
-    set_slide_background(slide7, COLOR_LIGHT_BG)
-    add_slide_header(slide7, "5. Điểm Sáng Kỹ Thuật & Tối Ưu Hóa")
+    slide6 = prs.slides.add_slide(blank_slide_layout)
+    set_slide_background(slide6, COLOR_LIGHT_BG)
+    add_slide_header(slide6, "5. Thiết Kế Cơ Sở Dữ Liệu & ERD")
 
+    # Left: Database description card
     add_card(
-        slide7,
-        Inches(1.0), Inches(2.0), Inches(5.2), Inches(4.5),
-        "Hàng đợi ICE Candidate (WebRTC)",
+        slide6,
+        Inches(1.0), Inches(2.0), Inches(4.8), Inches(4.5),
+        "Thực thể chính & Quan hệ",
         [
-            "Vấn đề: Ứng dụng WebRTC bị lỗi đen màn hình do các gói tin địa chỉ mạng (ICE Candidate) của người gọi đến trước khi người nhận bấm chấp nhận cuộc gọi.",
-            "Giải pháp: Xây dựng cơ chế hàng đợi (Queue) lưu trữ tạm thời các ICE candidate.",
-            "Kết quả: Ngay sau khi bấm OK kết nối, các gói tin được lấy ra và add đồng loạt, thiết lập camera và âm thanh mượt mà 100%."
-        ],
-        is_accented=True
-    )
-
-    add_card(
-        slide7,
-        Inches(7.133), Inches(2.0), Inches(5.2), Inches(4.5),
-        "Tính ổn định & Triển khai",
-        [
-            "Gửi mail OTP thực tế: Sử dụng Nodemailer kết nối App Password bảo mật an toàn.",
-            "Docker hóa toàn bộ: Dễ dàng cấu hình và khởi chạy ứng dụng với một lệnh duy nhất.",
-            "Cơ chế tự khởi tạo Admin mặc định khi database trống, tăng tính tiện lợi khi cài đặt hệ thống."
+            "nguoi_dung: Quản lý tài khoản khách hàng, khu du lịch, admin.",
+            "bai_viet, binh_luan: Lưu thông tin mạng xã hội.",
+            "dat_ve, ve_dich_vu: Quản lý booking vé.",
+            "tin_nhan, phong_chat: Nhắn tin realtime.",
+            "Ràng buộc khóa ngoại đảm bảo tính toàn vẹn.",
+            "Tối ưu hóa các truy vấn JOIN lấy dữ liệu."
         ]
     )
+
+    # Right: ERD image card background
+    erd_card = slide6.shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE, Inches(6.3), Inches(2.0), Inches(6.033), Inches(4.5))
+    erd_card.fill.solid()
+    erd_card.fill.fore_color.rgb = COLOR_CARD_BG
+    erd_card.line.color.rgb = COLOR_BORDER
+
+    # Load and insert ERD diagram
+    try_add_picture(slide6, IMG_ERD, Inches(6.4), Inches(2.1), width=Inches(5.833), height=Inches(4.3))
 
     # ----------------------------------------------------
     # SLIDE 7: Demo Giao Diện (UI Mockups with Real screenshots)
@@ -503,10 +504,18 @@ def create_presentation():
         try:
             prs.save(alternative_path)
             print(f"Permission denied on {output_path} (it is probably open in PowerPoint). Saved to {alternative_path} successfully instead!")
+        except PermissionError:
+            alternative_path_3 = "docs/TravelConnect_Slides_v3.pptx"
+            try:
+                prs.save(alternative_path_3)
+                print(f"Permission denied on v1 and v2. Saved to {alternative_path_3} successfully instead!")
+            except Exception as e:
+                print(f"Failed to save v3 file: {e}")
         except Exception as e:
             print(f"Failed to save alternative file: {e}")
     except Exception as e:
         print(f"Error saving presentation: {e}")
+
 
 
 if __name__ == "__main__":
