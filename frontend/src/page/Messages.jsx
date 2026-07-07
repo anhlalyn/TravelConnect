@@ -206,7 +206,7 @@ const Messages = () => {
       }
     };
 
-    const initializeWebRTC = async () => {
+    const initializeWebRTC = async (targetUserRoom) => {
       const configuration = {
         iceServers: [
           { urls: "stun:stun.l.google.com:19302" },
@@ -217,9 +217,9 @@ const Messages = () => {
       peerConnectionRef.current = new RTCPeerConnection(configuration);
 
       peerConnectionRef.current.onicecandidate = (event) => {
-        if (event.candidate && socketRef.current && activeRoom?.id_doi_phuong) {
+        if (event.candidate && socketRef.current && targetUserRoom) {
           socketRef.current.emit("ice-candidate", {
-            to: `user_${activeRoom.id_doi_phuong}`,
+            to: targetUserRoom,
             candidate: event.candidate,
           });
         }
@@ -249,7 +249,7 @@ const Messages = () => {
       }
 
       try {
-        const peerConnection = await initializeWebRTC();
+        const peerConnection = await initializeWebRTC(data.from);
         await peerConnection.setRemoteDescription(
           new RTCSessionDescription(data.offer),
         );
@@ -503,30 +503,8 @@ const Messages = () => {
     }
 
     try {
-      const configuration = {
-        iceServers: [
-          { urls: "stun:stun.l.google.com:19302" },
-          { urls: "stun:stun1.l.google.com:19302" },
-        ],
-      };
-
-      peerConnectionRef.current = new RTCPeerConnection(configuration);
-
-      peerConnectionRef.current.onicecandidate = (event) => {
-        if (event.candidate) {
-          socketRef.current.emit("ice-candidate", {
-            to: `user_${activeRoom.id_doi_phuong}`,
-            candidate: event.candidate,
-          });
-        }
-      };
-
-      peerConnectionRef.current.ontrack = (event) => {
-        setRemoteStream(event.streams[0]);
-        if (remoteVideoRef.current) {
-          remoteVideoRef.current.srcObject = event.streams[0];
-        }
-      };
+      const targetUserRoom = `user_${activeRoom.id_doi_phuong}`;
+      const peerConnection = await initializeWebRTC(targetUserRoom);
 
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: true,
@@ -539,14 +517,14 @@ const Messages = () => {
       }
 
       stream.getTracks().forEach((track) => {
-        peerConnectionRef.current.addTrack(track, stream);
+        peerConnection.addTrack(track, stream);
       });
 
-      const offer = await peerConnectionRef.current.createOffer();
-      await peerConnectionRef.current.setLocalDescription(offer);
+      const offer = await peerConnection.createOffer();
+      await peerConnection.setLocalDescription(offer);
 
       socketRef.current.emit("call-user", {
-        to: `user_${activeRoom.id_doi_phuong}`,
+        to: targetUserRoom,
         from: `user_${user.id}`,
         fromName: user.ten,
         offer,
